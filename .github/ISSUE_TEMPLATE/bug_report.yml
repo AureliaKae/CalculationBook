@@ -1,0 +1,37 @@
+---
+name: Bug 报告
+about: 玩法或引擎出了问题
+title: ''
+labels: bug
+body:
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: 发生了什么？
+      description: 描述你做的事、预期与实际的差别。烧制、回合、转世哪一环出的问题尽量写清楚。
+    validations:
+      required: true
+  - type: dropdown
+    id: channel
+    attributes:
+      label: 使用形态
+      options:
+        - 安装版（Setup exe）
+        - 便携版（Portable exe）
+        - 源码运行（npm run dev）
+    validations:
+      required: true
+  - type: input
+    id: book
+    attributes:
+      label: 哪本书（书名与大致章数，可选）
+      description: 涉及具体书籍的问题请附上，方便复现。
+    validations:
+      required: false
+  - type: textarea
+    id: logs
+    attributes:
+      label: 报错信息或截图
+      description: 界面报错截图、或 %APPDATA%/calculationpaper 下相关日志（如有）。不要贴 API Key。
+    validations:
+      required: false

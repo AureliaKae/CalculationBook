@@ -1,0 +1,3265 @@
+/* ============================================================
+   演算纸 — Fiction 绘本版样式
+   世界：暖奶油画布 + 白纸卡 + 粗黑描边 + 饱和色块 + 大圆角，
+   扁平无阴影，层级靠描边与色差；动效是弹跳与挤压。
+   令牌源：fiction/DESIGN.md（+ 推导补齐，见 docs/DESIGN.md）。
+   ============================================================ */
+
+/* ---------- token · 米纸（亮，暖奶油绘本） ---------- */
+:root,
+:root[data-theme="paper"] {
+  /* 色彩（fiction/DESIGN.md 原令牌） */
+  --fi-bg: #ffe9ce; /* 应用画布：暖奶油 */
+  --fi-surface: #ffffff; /* 白纸卡：面板/对话框/稿面 */
+  --fi-text: #111827; /* 正文墨 */
+  --fi-ink: #222222; /* 粗描边与主按钮底（primary） */
+  --fi-cream: #ffe9ce; /* 品牌色块（secondary） */
+  --fi-success: #16a34a;
+  --fi-warning: #d97706;
+  --fi-danger: #dc2626; /* 判定/暗骰/销毁（原朱红语义） */
+  /* 派生补充色（拍板 2026-08-21：绘本调色盘补两色，仅作底色配深字） */
+  --fi-sky: #4da3ff;
+  --fi-butter: #ffd644;
+  --fi-butter-soft: rgba(255, 214, 68, 0.35); /* 悬停染色 */
+  --fi-sky-soft: rgba(77, 163, 255, 0.22);
+  --fi-danger-soft: rgba(220, 38, 38, 0.14);
+  --fi-success-soft: rgba(22, 163, 74, 0.14);
+  /* 墨阶（由 text 派生） */
+  --fi-soft: rgba(17, 24, 39, 0.66);
+  --fi-faint: rgba(17, 24, 39, 0.48);
+  --fi-line: rgba(34, 34, 34, 0.22); /* 卡内细分隔线 */
+  --fi-outline: #222222; /* 签名粗描边色 */
+  /* 结构（推导补齐：DESIGN.md 未含边框/圆角档位） */
+  --fi-border-w: 2px;
+  --fi-border: 2px solid var(--fi-outline);
+  --fi-border-hero: 3px solid var(--fi-outline);
+  --fi-radius-sm: 4px;
+  --fi-radius-md: 8px;
+  --fi-radius-lg: 16px; /* 派生：卡片/对话框（品牌语 generously rounded） */
+  --fi-radius-pill: 999px; /* 派生：chips/开关 */
+  /* 演算坐标纸（唯一保留的网格，仅 DeriveStrip 内部） */
+  --fi-grid: rgba(34, 34, 34, 0.05);
+  --fi-grid-major: rgba(34, 34, 34, 0.09);
+  --fi-cell: 32px;
+  /* 主按钮文字色（夜稿翻转） */
+  --fi-on-ink: #ffe9ce;
+  color-scheme: light;
+}
+
+/* ---------- token · 夜稿（暗，暖可可绘本） ---------- */
+:root[data-theme="night"] {
+  --fi-bg: #221e1a; /* 暖可可画布 */
+  --fi-surface: #2c2721; /* 深奶油纸卡 */
+  --fi-text: #f5efe6;
+  --fi-ink: #f5efe6; /* 描边与主按钮底翻转为奶油 */
+  --fi-cream: #3a322b;
+  --fi-success: #4ade80;
+  --fi-warning: #fbbf24;
+  --fi-danger: #f87171;
+  --fi-sky: #7cb9ff;
+  --fi-butter: #ffdd57;
+  --fi-butter-soft: rgba(255, 221, 87, 0.2);
+  --fi-sky-soft: rgba(124, 185, 255, 0.18);
+  --fi-danger-soft: rgba(248, 113, 113, 0.16);
+  --fi-success-soft: rgba(74, 222, 128, 0.16);
+  --fi-soft: rgba(245, 239, 230, 0.68);
+  --fi-faint: rgba(245, 239, 230, 0.5);
+  --fi-line: rgba(245, 239, 230, 0.22);
+  --fi-outline: #f5efe6;
+  --fi-grid: rgba(245, 239, 230, 0.05);
+  --fi-grid-major: rgba(245, 239, 230, 0.09);
+  --fi-on-ink: #221e1a; /* 奶油底上的深字 */
+  color-scheme: dark;
+}
+
+/* ---------- 字体（本地打包：Cossette 双件 + JetBrains Mono；CJK 回退圆体） ---------- */
+:root {
+  /* 中文字体序（拍板 2026-08-21 清晰优先）：雅黑先行——它有真粗体字重；
+     幼圆只有单一字重，700 字重会被算法抹粗（双描边发虚），故降为雅黑
+     缺席时的回退。Mac 无雅黑会落到 PingFang SC（多字重）。 */
+  --fi-font: "Cossette Texte", "Microsoft YaHei", "PingFang SC", "YouYuan", "幼圆",
+    "Yuanti SC", "Yuanti", "Segoe UI", sans-serif;
+  --fi-display: "Cossette Titre", "Microsoft YaHei", "PingFang SC", "YouYuan", "幼圆",
+    "Yuanti SC", "Yuanti", sans-serif;
+  --fi-mono: "JetBrains Mono", "Cascadia Mono", "Consolas", "SF Mono", Menlo, monospace;
+  /* 绘本运动：弹性过冲曲线（GSAP back.out 的 CSS 近似） */
+  --fi-ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --fi-ease-out: cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+
+/* ---------- 基底 ---------- */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  scrollbar-color: var(--fi-faint) transparent;
+}
+
+body {
+  font-family: var(--fi-font);
+  font-size: 1rem;
+  background: var(--fi-bg);
+  color: var(--fi-text);
+  transition: background-color 0.3s ease, color 0.3s ease;
+  -webkit-font-smoothing: antialiased;
+}
+
+::selection {
+  background: var(--fi-butter);
+  color: #111827;
+}
+
+:focus-visible {
+  outline: 2px solid var(--fi-outline);
+  outline-offset: 2px;
+  border-radius: var(--fi-radius-sm);
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--fi-faint);
+  border: 2px solid transparent;
+  background-clip: content-box;
+  border-radius: var(--fi-radius-pill);
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.app {
+  min-height: 100vh;
+  max-width: 100%;
+  /* clip 而非 hidden：hidden 会把 .app 变成滚动容器，顶栏的 sticky
+     从此吸不到视口顶（顶栏会随正文滚走）。clip 同样裁掉横向溢出，
+     但不创建滚动容器，sticky 照常工作。 */
+  overflow-x: clip;
+  display: flex;
+  flex-direction: column;
+}
+
+/* 等宽数据工具类（旧稿幽灵类，此版正式定义） */
+.mono {
+  font-family: var(--fi-mono);
+}
+
+/* 视觉隐藏的读屏播报区 */
+.sr-status {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* ---------- 按钮原语 ---------- */
+/* 主操作：墨底奶油字，按压挤压 */
+.pen-submit {
+  appearance: none;
+  border: var(--fi-border);
+  background: var(--fi-ink);
+  color: var(--fi-on-ink);
+  font-family: var(--fi-font);
+  font-size: 0.92rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  padding: 0.55rem 1.3rem;
+  border-radius: var(--fi-radius-md);
+  cursor: pointer;
+  transition: transform 0.16s var(--fi-ease-spring), background-color 0.16s ease,
+    opacity 0.16s ease;
+}
+
+.pen-submit:hover:not(:disabled) {
+  transform: scale(1.04);
+}
+
+.pen-submit:active:not(:disabled) {
+  transform: scale(0.94);
+}
+
+.pen-submit:disabled {
+  opacity: 0.38;
+  cursor: default;
+}
+
+/* 次操作：白底描边，悬停黄油底 */
+.ghost-btn {
+  appearance: none;
+  font-family: var(--fi-font);
+  font-size: 0.86rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  color: var(--fi-text);
+  background: var(--fi-surface);
+  border: var(--fi-border);
+  padding: 0.48rem 1.05rem;
+  border-radius: var(--fi-radius-md);
+  cursor: pointer;
+  transition: transform 0.16s var(--fi-ease-spring), background-color 0.16s ease;
+}
+
+.ghost-btn:hover:not(:disabled) {
+  background: var(--fi-butter);
+  transform: scale(1.04);
+}
+
+.ghost-btn:active:not(:disabled) {
+  transform: scale(0.94);
+}
+
+.ghost-btn:disabled {
+  opacity: 0.38;
+  cursor: default;
+}
+
+/* 顶栏导航位：白底小胶囊 */
+.navbit {
+  appearance: none;
+  border: var(--fi-border);
+  background: var(--fi-surface);
+  color: var(--fi-text);
+  font-family: var(--fi-font);
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  cursor: pointer;
+  padding: 0.24rem 0.75rem;
+  border-radius: var(--fi-radius-pill);
+  transition: transform 0.16s var(--fi-ease-spring), background-color 0.16s ease;
+}
+
+.navbit:hover {
+  background: var(--fi-butter);
+  transform: scale(1.05);
+}
+
+.navbit:active {
+  transform: scale(0.93);
+}
+
+/* 行内小字钮（案头行操作/意图面板）：小号描边胶囊 */
+.fx-act {
+  appearance: none;
+  font-family: var(--fi-font);
+  font-size: 0.76rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--fi-soft);
+  background: var(--fi-surface);
+  border: 2px solid var(--fi-line);
+  padding: 0.14rem 0.6rem;
+  border-radius: var(--fi-radius-pill);
+  cursor: pointer;
+  transition: color 0.16s ease, border-color 0.16s ease, background-color 0.16s ease,
+    transform 0.16s var(--fi-ease-spring);
+}
+
+.fx-act:hover:not(:disabled) {
+  color: var(--fi-text);
+  border-color: var(--fi-outline);
+  background: var(--fi-butter);
+  transform: scale(1.05);
+}
+
+.fx-act:active:not(:disabled) {
+  transform: scale(0.93);
+}
+
+.fx-act:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+/* 危险行内钮（下架） */
+.fx-act.danger:hover:not(:disabled) {
+  color: #ffffff;
+  background: var(--fi-danger);
+  border-color: var(--fi-outline);
+}
+
+/* ---------- 输入原语：奶油井 + 粗描边 ---------- */
+.pen-input,
+.cre-wish-input,
+.ip-input,
+.ink-input,
+.brush-select,
+.ink-add-url {
+  appearance: none;
+  border: var(--fi-border);
+  background: var(--fi-bg);
+  color: var(--fi-text);
+  font-family: var(--fi-font);
+  border-radius: var(--fi-radius-sm);
+  caret-color: var(--fi-text);
+  transition: background-color 0.16s ease;
+}
+
+.pen-input::placeholder,
+.cre-wish-input::placeholder,
+.ip-input::placeholder {
+  color: var(--fi-faint);
+}
+
+/* ---------- 顶栏（推演台/形势图/文房/编年史共用） ---------- */
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.8rem clamp(1.2rem, 4vw, 3rem);
+  border-bottom: var(--fi-border);
+  font-size: 0.86rem;
+  background: var(--fi-bg);
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  transition: background-color 0.3s ease;
+}
+
+.topbar .book {
+  font-family: var(--fi-display);
+  font-weight: 700;
+  font-size: 1.12rem;
+  letter-spacing: 0.04em;
+}
+
+.book-link {
+  appearance: none;
+  border: none;
+  background: none;
+  color: var(--fi-text);
+  font: inherit;
+  cursor: pointer;
+  padding: 0.1rem 0.2rem;
+  border-radius: var(--fi-radius-sm);
+  transition: background-color 0.16s ease;
+}
+
+.book-link:hover {
+  background: var(--fi-butter-soft);
+}
+
+.topbar .chapter {
+  color: var(--fi-soft);
+  margin-left: 0.9em;
+}
+
+.topbar .right {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  /* 角位走廊：让位固定窗口控制（3×2.4rem ≈ 7.2rem） */
+  margin-right: 7.4rem;
+}
+
+.topbar .scene-no {
+  font-family: var(--fi-mono);
+  color: var(--fi-soft);
+  font-size: 0.78rem;
+  display: inline-flex;
+  align-items: center;
+}
+
+.topbar-clock {
+  margin-left: -0.3rem;
+  color: var(--fi-faint);
+}
+
+/* ---------- 主题切换：分段胶囊 ---------- */
+.theme-toggle {
+  display: inline-flex;
+  gap: 0.25rem;
+  font-size: 0.78rem;
+  border: var(--fi-border);
+  border-radius: var(--fi-radius-pill);
+  background: var(--fi-surface);
+  padding: 0.18rem;
+}
+
+.theme-toggle button {
+  appearance: none;
+  border: none;
+  background: none;
+  color: var(--fi-soft);
+  font: inherit;
+  font-weight: 600;
+  padding: 0.14rem 0.65rem;
+  border-radius: var(--fi-radius-pill);
+  cursor: pointer;
+  transition: color 0.16s ease, background-color 0.16s ease;
+}
+
+.theme-toggle button:hover {
+  color: var(--fi-text);
+}
+
+.theme-toggle button[aria-pressed="true"] {
+  color: var(--fi-text);
+  background: var(--fi-butter);
+}
+
+/* ---------- 无边框窗口控制：描边小方钮，钉死右上角 ---------- */
+.win-ctl {
+  position: fixed;
+  top: 0;
+  right: 0;
+  z-index: 50;
+  display: inline-flex;
+  align-items: stretch;
+  margin: 0.45rem 0.6rem 0 0;
+  gap: 0.3rem;
+}
+
+.win-btn {
+  appearance: none;
+  font-family: var(--fi-mono);
+  font-size: 0.72rem;
+  line-height: 1;
+  color: var(--fi-text);
+  background: var(--fi-surface);
+  border: var(--fi-border);
+  border-radius: var(--fi-radius-sm);
+  width: 2.3rem;
+  height: 1.9rem;
+  display: inline-grid;
+  place-items: center;
+  cursor: pointer;
+  transition: background-color 0.16s ease, color 0.16s ease, transform 0.16s var(--fi-ease-spring);
+}
+
+.win-btn:hover {
+  background: var(--fi-butter);
+  transform: scale(1.06);
+}
+
+.win-btn:active {
+  transform: scale(0.92);
+}
+
+.win-close:hover {
+  background: var(--fi-danger);
+  color: #ffffff;
+}
+
+/* ============================================================
+   案头 · 绘本封面 + 书卡网格 + 浮动工具坞（骨架重构 2026-08-21）
+   ============================================================ */
+.desk-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding: clamp(2.2rem, 6vh, 4rem) clamp(1.2rem, 4vw, 3rem) 1.6rem;
+}
+
+/* 封面主角块：黄油色块微倾压阵，副题白底胶囊 */
+.desk-hero {
+  background: var(--fi-butter);
+  border: var(--fi-border-hero);
+  border-radius: var(--fi-radius-lg);
+  padding: clamp(1.4rem, 3vh, 2.1rem) clamp(1.6rem, 3.5vw, 3rem);
+  transform: rotate(-1.2deg);
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+  align-items: flex-start;
+}
+
+.desk-corner {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.8rem;
+  margin-right: 7.4rem; /* 让位窗口控制 */
+}
+
+.desk-title {
+  font-family: var(--fi-display);
+  font-weight: 700;
+  font-size: clamp(2.6rem, 5.5vw, 3.6rem);
+  letter-spacing: 0.1em;
+  margin-right: -0.1em;
+  line-height: 1.12;
+  color: #111827; /* 黄油底上永远深字 */
+}
+
+.desk-sub {
+  display: inline-block;
+  background: var(--fi-surface);
+  border: var(--fi-border);
+  border-radius: var(--fi-radius-pill);
+  color: var(--fi-text);
+  letter-spacing: 0.08em;
+  font-size: 0.94rem;
+  font-weight: 600;
+  padding: 0.3rem 1rem;
+}
+
+.desk-stage {
+  flex: 1;
+  width: min(74rem, 100%);
+  margin: 0 auto;
+  padding: 0.8rem clamp(1.2rem, 4vw, 3rem) 5.5rem;
+}
+
+/* 书架：响应式书卡网格 */
+.fx-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(17rem, 1fr));
+  gap: 1rem;
+}
+
+.fx-row {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  padding: 1rem 1.1rem 0.9rem;
+  background: var(--fi-surface);
+  border: var(--fi-border);
+  border-radius: var(--fi-radius-md);
+  transition: transform 0.18s var(--fi-ease-spring), background-color 0.18s ease;
+}
+
+.fx-row:hover {
+  transform: translateY(-3px) rotate(-0.4deg);
+}
+
+/* 卡顶行：黄油圆徽章 + 等宽 meta */
+.fx-card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+}
+
+/* 黄油圆徽章：等宽编号 */
+.fx-no {
+  font-family: var(--fi-mono);
+  font-size: 0.76rem;
+  font-weight: 700;
+  color: var(--fi-text);
+  display: inline-grid;
+  place-items: center;
+  width: 2rem;
+  height: 2rem;
+  background: var(--fi-butter);
+  border: var(--fi-border);
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.fx-main {
+  appearance: none;
+  font: inherit;
+  color: inherit;
+  background: none;
+  border: none;
+  padding: 0;
+  text-align: left;
+  cursor: pointer;
+  display: block;
+  min-width: 0;
+  border-radius: var(--fi-radius-sm);
+}
+
+.fx-name {
+  font-family: var(--fi-display);
+  font-weight: 700;
+  font-size: 1.3rem;
+  line-height: 1.45;
+  letter-spacing: 0.02em;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.fx-meta {
+  font-family: var(--fi-mono);
+  font-size: 0.74rem;
+  color: var(--fi-soft);
+  white-space: nowrap;
+  transition: color 0.18s ease;
+  text-align: right;
+}
+
+.fx-row:hover .fx-meta {
+  color: var(--fi-text);
+}
+
+/* 卡底操作行：悬停浮现的小胶囊 */
+.fx-acts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin-top: auto;
+  opacity: 0;
+  transform: translateY(4px);
+  transition: opacity 0.2s ease, transform 0.2s var(--fi-ease-spring);
+}
+
+.fx-row:hover .fx-acts,
+.fx-acts:focus-within {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* 降级与状态记号 */
+.fx-flags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.fx-flag {
+  font-size: 0.74rem;
+  font-weight: 600;
+  color: var(--fi-danger);
+  background: var(--fi-danger-soft);
+  border: 2px solid var(--fi-danger);
+  border-radius: var(--fi-radius-pill);
+  padding: 0.05rem 0.55rem;
+  white-space: nowrap;
+}
+
+/* 展卷中：卡顶行忙态（弹跳墨点） */
+.fx-row.opening .fx-meta {
+  font-weight: 600;
+}
+
+.fx-row.opening .fx-meta::before {
+  content: "";
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--fi-warning);
+  margin-right: 0.5rem;
+  vertical-align: 1px;
+  animation: dot-hop 0.55s var(--fi-ease-out) infinite alternate;
+}
+
+.fx-main:disabled {
+  pointer-events: none;
+}
+
+/* 起稿中的卡：构成条占满卡宽 */
+.fx-row .fx-bar {
+  display: none;
+  width: 100%;
+}
+
+.fx-row.baking .fx-bar {
+  display: flex;
+}
+
+/* 白卷入口：网格里的虚线卡（竖排居中） */
+.fx-new {
+  appearance: none;
+  font: inherit;
+  background: transparent;
+  border: var(--fi-border);
+  border-style: dashed;
+  border-radius: var(--fi-radius-md);
+  padding: 1.6rem 1.2rem;
+  min-height: 9rem;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  color: var(--fi-soft);
+  text-align: center;
+  transition: background-color 0.18s ease, color 0.18s ease, transform 0.18s var(--fi-ease-spring);
+}
+
+.fx-new:hover {
+  background: var(--fi-butter-soft);
+  color: var(--fi-text);
+  transform: translateY(-3px);
+}
+
+.fx-new .fx-plus {
+  font-family: var(--fi-mono);
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: var(--fi-soft);
+  transition: color 0.18s ease;
+}
+
+.fx-new .fx-name {
+  font-size: 1.05rem;
+  font-weight: 600;
+  -webkit-line-clamp: 1;
+}
+
+.fx-new .fx-sub {
+  font-size: 0.78rem;
+  color: var(--fi-faint);
+}
+
+.fx-new:hover .fx-plus {
+  color: var(--fi-text);
+}
+
+/* 浮动工具坞：底部居中的白卡胶囊坞 */
+.desk-toolbar {
+  position: sticky;
+  bottom: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+  margin: 0 auto;
+  width: max-content;
+  max-width: calc(100vw - 2rem);
+  background: var(--fi-surface);
+  border: var(--fi-border);
+  border-radius: var(--fi-radius-pill);
+  padding: 0.45rem 0.9rem;
+  transition: background-color 0.3s ease;
+}
+
+.desk-note {
+  font-size: 0.84rem;
+  font-weight: 600;
+  color: var(--fi-soft);
+  max-width: 16rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.desk-note:empty {
+  display: none;
+}
+
+.desk-tools {
+  display: flex;
+  gap: 0.45rem;
+}
+
+/* ============================================================
+   推演台 · 双栏骨架（书页卡 + 便签栏并立，2026-08-21 重构）
+   ============================================================ */
+.stage {
+  flex: 1;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 15rem;
+  gap: 1.1rem;
+  align-items: start;
+  width: min(82rem, 100%);
+  margin: 0 auto;
+  padding: clamp(0.9rem, 2.2vw, 1.8rem);
+}
+
+.sheet-wrap {
+  width: 100%;
+  min-width: 0;
+  /* 不再常驻 will-change: transform——常驻提升合成层会让整面稿纸的文字
+     一直走灰度抗锯齿（发虚），与层外 ClearType 文字混排显粗细不一；
+     入场动画结束即 clearProps，稿面回归普通层（拍板 2026-08-21）。 */
+  display: flex;
+}
+
+/* 稿面：全站最大的一张白纸卡 */
+.sheet {
+  flex: 1;
+  position: relative;
+  background: var(--fi-surface);
+  border: var(--fi-border-hero);
+  border-radius: var(--fi-radius-lg);
+  padding: clamp(2rem, 3.5vw, 3rem) clamp(1.6rem, 3vw, 2.8rem);
+  transition: background-color 0.3s ease, border-color 0.3s ease;
+}
+
+.sheet-main {
+  min-width: 0;
+}
+
+/* 章节横幅：天蓝色带压阵天头 */
+.scene-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  background: var(--fi-sky-soft);
+  border: var(--fi-border);
+  border-radius: var(--fi-radius-md);
+  padding: 0.85rem 1.2rem;
+  margin-bottom: 1.7rem;
+}
+
+.scene-title {
+  font-family: var(--fi-display);
+  font-weight: 700;
+  font-size: clamp(1.5rem, 2.2vw, 1.95rem);
+  letter-spacing: 0.05em;
+  line-height: 1.35;
+}
+
+.scene-no {
+  font-family: var(--fi-mono);
+  font-size: 0.76rem;
+  font-weight: 700;
+  color: var(--fi-text);
+  background: var(--fi-surface);
+  border: 2px solid var(--fi-line);
+  border-radius: var(--fi-radius-pill);
+  padding: 0.15rem 0.7rem;
+  white-space: nowrap;
+}
+
+/* 章节横幅自带边界，旧规线退役 */
+.scene-rule {
+  display: none;
+}
+
+/* ---------- 正文 ---------- */
+.prose {
+  font-size: var(--read-size, 1.0625rem);
+  line-height: 2.05;
+  text-align: justify;
+  max-width: var(--read-col, 42em); /* 密度设置：阅读栏宽（此版起生效） */
+}
+
+.prose p {
+  text-indent: 2em;
+  margin: 0 0 1.15em;
+}
+
+.prose p:last-child {
+  margin-bottom: 0;
+}
+
+.ch {
+  display: inline; /* 保持内联：inline-block 会破坏 CJK 标点压缩与字距（拍板 2026-08-21 字距回归） */
+}
+
+/* 后果留痕：黄油马克笔高亮块（随宽度扫入） */
+.marked {
+  background-image: linear-gradient(var(--fi-butter), var(--fi-butter));
+  background-repeat: no-repeat;
+  background-position: 0 74%;
+  background-size: 0% 0.42em;
+  border-radius: 2px;
+  transition: background-size 0.7s var(--fi-ease-out);
+  padding-bottom: 1px;
+}
+
+.marked.on {
+  background-size: 100% 0.42em;
+}
+
+/* 楔子 */
+.prologue {
+  margin-bottom: 2rem;
+}
+
+.prologue-mark {
+  display: inline-block;
+  font-family: var(--fi-display);
+  font-weight: 700;
+  color: var(--fi-text);
+  background: var(--fi-butter);
+  border: var(--fi-border);
+  border-radius: var(--fi-radius-sm);
+  font-size: 0.86rem;
+  padding: 0.1rem 0.6rem;
+  margin-bottom: 0.7rem;
+}
+
+/* 一手 */
+.hand {
+  position: relative;
+  margin-bottom: 2.1rem;
+}
+
+.hand-mark {
+  display: inline-block;
+  font-family: var(--fi-mono);
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--fi-soft);
+  background: var(--fi-bg);
+  border: 2px solid var(--fi-line);
+  border-radius: var(--fi-radius-pill);
+  padding: 0.05rem 0.6rem;
+  letter-spacing: 0.1em;
+  margin-bottom: 0.5rem;
+}
+
+/* ---------- 便签栏：与书页卡并立的贴纸栈（骨架重构） ---------- */
+.margin-col {
+  position: sticky;
+  top: 4.4rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+  min-width: 0;
+  max-height: calc(100vh - 6rem);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  /* 滚轮可滚、条不见（拍板 2026-08-21）：手记卡增删行会令内容在
+     max-height 上下越界，滚动条一露一收既扎眼又挤动整栏重排——干脆
+     隐藏滚动条本体，滚动能力不受影响，也不再有占位缝。 */
+  scrollbar-width: none;
+}
+
+.margin-col::-webkit-scrollbar {
+  display: none;
+}
+
+.notes {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  background: var(--fi-surface);
+  border: var(--fi-border);
+  border-radius: var(--fi-radius-md);
+  padding: 0.85rem 0.95rem;
+}
+
+.note {
+  font-size: 0.86rem;
+  line-height: 1.75;
+  color: var(--fi-soft);
+  padding-left: 0.9rem;
+  position: relative;
+}
+
+.note::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0.5em;
+  width: 0.45rem;
+  height: 0.45rem;
+  background: var(--fi-sky);
+  border: 2px solid var(--fi-outline);
+  border-radius: 50%;
+}
+
+.note.warn {
+  color: var(--fi-danger);
+}
+.note.warn::before {
+  background: var(--fi-danger);
+}
+.note.growth {
+  color: var(--fi-success);
+}
+.note.growth::before {
+  background: var(--fi-success);
+}
+
+/* 打字机批注：引导点改内联元素 */
+.note.note-type {
+  display: flex;
+  gap: 0.55rem;
+  padding-left: 0;
+}
+
+.note.note-type::before {
+  display: none;
+}
+
+.note-dash {
+  flex-shrink: 0;
+  width: 0.6rem;
+  height: 2px;
+  background: var(--fi-outline);
+  border-radius: var(--fi-radius-pill);
+  margin-top: 0.72em;
+}
+
+.note.warn .note-dash {
+  background: var(--fi-danger);
+}
+
+.note.growth .note-dash {
+  background: var(--fi-success);
+}
+
+/* 演算态文字行（Chronicle/MapView 提示行复用） */
+.derive-status {
+  font-size: 0.9rem;
+  color: var(--fi-soft);
+  letter-spacing: 0.04em;
+}
+
+.derive-status .dots {
+  font-family: var(--fi-mono);
+  color: var(--fi-faint);
+}
+
+/* ---------- 落笔坞：稿末奶油输入卡 ---------- */
+.pen {
+  margin-top: 2.2rem;
+  background: var(--fi-bg);
+  border: var(--fi-border);
+  border-radius: var(--fi-radius-md);
+  padding: 1rem 1.1rem;
+  position: relative;
+}
+
+.pen-label {
+  font-size: 0.92rem;
+  font-weight: 600;
+  color: var(--fi-text);
+  letter-spacing: 0.05em;
+  margin-bottom: 0.6rem;
+}
+
+.pen-row {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+}
+
+.pen-input {
+  flex: 1;
+  min-width: 0;
+  font-size: 1rem;
+  padding: 0.55rem 0.85rem;
+}
+
+.pen-input:focus {
+  outline: none;
+  background: var(--fi-surface);
+}
+
+.pen-count {
+  font-family: var(--fi-mono);
+  font-size: 0.74rem;
+  color: var(--fi-faint);
+  white-space: nowrap;
+}
+
+.pen-count.full {
+  color: var(--fi-danger);
+  font-weight: 700;
+}
+
+/* 落笔历史浮层：白卡描边 */
+.pen-history {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 100%;
+  margin-bottom: 0.45rem;
+  list-style: none;
+  background: var(--fi-surface);
+  border: var(--fi-border);
+  border-radius: var(--fi-radius-md);
+  z-index: 15;
+  max-height: 12rem;
+  overflow-y: auto;
+  padding: 0.3rem;
+}
+
+.pen-history button {
+  appearance: none;
+  background: none;
+  border: none;
+  border-radius: var(--fi-radius-sm);
+  text-align: left;
+  width: 100%;
+  font-family: var(--fi-font);
+  font-size: 0.84rem;
+  color: var(--fi-soft);
+  padding: 0.42rem 0.65rem;
+  cursor: pointer;
+  transition: color 0.15s ease, background-color 0.15s ease;
+}
+
+.pen-history button:hover {
+  color: var(--fi-text);
+  background: var(--fi-butter-soft);
+}
+
+/* ---------- 解法：白色行卡 ---------- */
+.options {
+  margin-top: 2.2rem;
+}
+
+.options-head {
+  font-size: 0.9rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: var(--fi-soft);
+  padding: 0 0 0.55rem;
+}
+
+.opt {
+  display: grid;
+  grid-template-columns: auto auto 1fr;
+  grid-template-rows: auto auto;
+  column-gap: 0.85rem;
+  align-items: start;
+  position: relative;
+  width: 100%;
+  appearance: none;
+  background: var(--fi-surface);
+  border: var(--fi-border);
+  border-radius: var(--fi-radius-md);
+  text-align: left;
+  font-family: var(--fi-font);
+  font-size: 0.98rem;
+  line-height: 1.85;
+  color: var(--fi-text);
+  padding: 0.85rem 1rem;
+  margin-bottom: 0.55rem;
+  cursor: pointer;
+  transition: background-color 0.18s ease, transform 0.18s var(--fi-ease-spring);
+}
+
+.opt:hover {
+  background: var(--fi-butter-soft);
+  transform: translateY(-2px);
+}
+
+.opt .tick {
+  grid-column: 1;
+  grid-row: 1;
+  width: 1.4rem;
+  height: 3px;
+  border-radius: var(--fi-radius-pill);
+  background: var(--fi-line);
+  align-self: center;
+  margin-top: 1em;
+  transform: scaleX(0.65);
+  transform-origin: left center;
+  transition: transform 0.24s var(--fi-ease-spring), background-color 0.24s ease;
+}
+
+.opt:hover .tick,
+.opt.chosen .tick {
+  transform: scaleX(1);
+  background: var(--fi-danger);
+}
+
+/* 红圈号（暗骰）：描边圆 + 等宽数字，悬停/选中转朱 */
+.badge {
+  grid-column: 2;
+  grid-row: 1;
+  position: relative;
+  display: inline-grid;
+  place-items: center;
+  width: 1.8rem;
+  height: 1.8rem;
+  flex-shrink: 0;
+  align-self: center;
+  margin-top: 0.08em;
+}
+
+.badge svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.badge circle {
+  fill: var(--fi-butter);
+  stroke: var(--fi-outline);
+  stroke-width: 2;
+  transition: stroke 0.2s ease, fill 0.2s ease;
+}
+
+.opt:hover .badge circle,
+.opt.chosen .badge circle {
+  stroke: var(--fi-danger);
+}
+
+.badge .no {
+  position: relative;
+  font-family: var(--fi-mono);
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--fi-text);
+  min-width: 1.2em;
+  text-align: center;
+}
+
+.opt .text {
+  grid-column: 3;
+  grid-row: 1;
+  min-width: 0;
+}
+
+.opt .cand-note {
+  grid-column: 3;
+  grid-row: 2;
+  font-size: 0.78rem;
+  color: var(--fi-soft);
+  text-align: left;
+  padding-right: 4.5rem;
+}
+
+.opt .hint {
+  position: absolute;
+  top: 0.8rem;
+  right: 0.9rem;
+  font-family: var(--fi-mono);
+  font-size: 0.72rem;
+  color: var(--fi-faint);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+}
+
+.opt:hover .hint,
+.opt:focus-visible .hint {
+  opacity: 1;
+}
+
+.opt.chosen {
+  background: var(--fi-butter);
+  border-color: var(--fi-danger);
+}
+
+.opt.chosen .badge circle {
+  fill: var(--fi-danger);
+  stroke: var(--fi-danger);
+}
+
+.opt.chosen .badge .no {
+  color: #ffffff;
+}
+
+.opt.faded {
+  opacity: 0.38;
+}
+
+.opt.watch .tick {
+  background: repeating-linear-gradient(
+    to right,
+    var(--fi-outline) 0,
+    var(--fi-outline) 3px,
+    transparent 3px,
+    transparent 6px
+  );
+}
+
+/* 落笔回声 */
+.echo {
+  margin-top: 2rem;
+  font-size: 0.9rem;
+  color: var(--fi-soft);
+  letter-spacing: 0.03em;
+  padding-left: 0.9rem;
+  border-left: 3px solid var(--fi-butter);
+}
+
+/* 关键回合预判行 */
+.key-turn-note {
+  margin-top: 2.2rem;
+  font-size: 0.9rem;
+  color: var(--fi-soft);
+  letter-spacing: 0.03em;
+}
+
+.key-turn-note .ds-key,
+.ds-key {
+  color: var(--fi-danger);
+  font-weight: 700;
+}
+
+/* ---------- 判定（判词卡） ---------- */
+.grade {
+  width: 2.6rem;
+  height: 2.6rem;
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  position: relative;
+  font-family: var(--fi-display);
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: var(--fi-danger);
+}
+
+.grade svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.grade circle {
+  fill: none;
+  stroke: var(--fi-danger);
+  stroke-width: 2;
+}
+
+.grade circle.echo {
+  stroke-width: 1.5;
+  opacity: 0.5;
+}
+
+.grade-char {
+  position: relative;
+}
+
+.verdict-text {
+  font-family: var(--fi-mono);
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--fi-danger);
+  letter-spacing: 0.04em;
+}
+
+/* ---------- 便签区块：每段一张贴纸卡 ---------- */
+.margin-sec {
+  background: var(--fi-surface);
+  border: var(--fi-border);
+  border-radius: var(--fi-radius-md);
+  padding: 0.85rem 0.95rem;
+}
+
+.ms-mark {
+  display: inline-block;
+  font-family: var(--fi-display);
+  font-weight: 700;
+  font-size: 0.76rem;
+  color: var(--fi-text);
+  background: var(--fi-butter);
+  border: 2px solid var(--fi-outline);
+  border-radius: var(--fi-radius-pill);
+  letter-spacing: 0.05em; /* 文本自带空格分隔，字距只做微调（字距回归 2026-08-21） */
+  padding: 0.06rem 0.55rem;
+  margin-bottom: 0.55rem;
+}
+
+.foot-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.42rem;
+}
+
+.foot-item {
+  display: flex;
+  gap: 0.5rem;
+  align-items: baseline;
+  font-size: 0.82rem;
+  color: var(--fi-soft);
+  line-height: 1.6;
+}
+
+.foot-no {
+  font-family: var(--fi-mono);
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--fi-soft);
+  flex-shrink: 0;
+}
+
+.foot-item.ok .foot-no {
+  color: var(--fi-success);
+}
+
+.foot-item.bad .foot-no {
+  color: var(--fi-danger);
+}
+
+.foot-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* 原著主角现状卡（.proto-card/-name/-line/-sum/-event 五个零引用类已删，
+   清理轮 2026-08-21；活类 .proto-status/.proto-self* 见 PersonDialog/Reading。） */
+.proto-status {
+  font-family: var(--fi-mono);
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: var(--fi-danger);
+  background: var(--fi-danger-soft);
+  border: 1.5px solid var(--fi-danger);
+  border-radius: var(--fi-radius-pill);
+  padding: 0 0.4rem;
+  margin-left: 0.5em;
+  letter-spacing: 0.05em;
+}
+
+/* 此身摘要 */
+.proto-self {
+  appearance: none;
+  font-family: var(--fi-font);
+  text-align: left;
+  background: var(--fi-surface);
+  border: var(--fi-border);
+  border-radius: var(--fi-radius-md);
+  color: var(--fi-text);
+  padding: 0.5rem 0.75rem;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  cursor: pointer;
+  transition: background-color 0.16s ease, transform 0.16s var(--fi-ease-spring);
+}
+
+.proto-self:hover {
+  background: var(--fi-butter-soft);
+  transform: translateY(-1px);
+}
+
+.proto-self-realm {
+  font-family: var(--fi-display);
+  font-weight: 700;
+  font-size: 0.88rem;
+}
+
+.proto-self-counts {
+  font-family: var(--fi-mono);
+  font-size: 0.7rem;
+  color: var(--fi-faint);
+  letter-spacing: 0.04em;
+}
+
+/* 关系簿 */
+.rel-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.rel-item {
+  appearance: none;
+  background: none;
+  border: 2px solid transparent;
+  border-radius: var(--fi-radius-sm);
+  text-align: left;
+  font-family: var(--fi-font);
+  padding: 0.3rem 0.35rem;
+  width: 100%;
+  display: grid;
+  grid-template-columns: auto auto 1fr;
+  gap: 0 0.5rem;
+  align-items: baseline;
+  cursor: pointer;
+  color: var(--fi-soft);
+  transition: color 0.16s ease, background-color 0.16s ease, border-color 0.16s ease;
+}
+
+.rel-item:hover {
+  color: var(--fi-text);
+  background: var(--fi-surface);
+  border-color: var(--fi-line);
+}
+
+.rel-name {
+  font-family: var(--fi-display);
+  font-weight: 700;
+  font-size: 0.86rem;
+  color: var(--fi-text);
+}
+
+.rel-stance {
+  font-size: 0.66rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  border: 1.5px solid var(--fi-line);
+  border-radius: var(--fi-radius-pill);
+  padding: 0.02rem 0.4rem;
+  white-space: nowrap;
+}
+
+.rel-stance.tone-good {
+  color: var(--fi-success);
+  border-color: var(--fi-success);
+  background: var(--fi-success-soft);
+}
+
+.rel-stance.tone-bad {
+  color: var(--fi-danger);
+  border-color: var(--fi-danger);
+  background: var(--fi-danger-soft);
+}
+
+.rel-stance.tone-cool {
+  color: var(--fi-soft);
+}
+
+.rel-stance.tone-dead {
+  color: var(--fi-faint);
+  border-style: dashed;
+}
+
+.rel-note {
+  font-size: 0.72rem;
+  color: var(--fi-faint);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rel-more {
+  font-family: var(--fi-mono);
+  font-size: 0.68rem;
+  color: var(--fi-faint);
+  margin-top: 0.35rem;
+  padding-left: 0.25rem;
+}
+
+/* ---------- 命数卡：改命铺垫的火候意象 ---------- */
+.fate-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.fate-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  background: var(--fi-bg);
+  border: 2px solid var(--fi-line);
+  border-radius: var(--fi-radius-sm);
+  padding: 0.45rem 0.6rem;
+}
+
+.fate-label {
+  font-size: 0.82rem;
+  line-height: 1.5;
+  color: var(--fi-text);
+}
+
+.fate-stage {
+  font-family: var(--fi-mono);
+  font-size: 0.68rem;
+  color: var(--fi-faint);
+  letter-spacing: 0.08em;
+}
+
+.fate-item.tier-2 .fate-stage {
+  color: var(--fi-soft);
+}
+
+/* 临门：朱红示警——火候已到，可以出手了 */
+.fate-item.tier-3 {
+  border-color: var(--fi-danger);
+}
+
+.fate-item.tier-3 .fate-stage {
+  color: var(--fi-danger);
+}
+
+.person-summary {
+  font-size: 0.84rem;
+  color: var(--fi-soft);
+  line-height: 1.7;
+  margin-top: 0.4rem;
+}
+
+/* ---------- 流式叙事（等待期未定稿正文） ---------- */
+.ink-draft {
+  margin-top: 1.4rem;
+  border-top: 2px solid var(--fi-line);
+  padding-top: 1rem;
+}
+
+.ink-draft-label {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--fi-faint);
+  letter-spacing: 0.15em;
+  margin-bottom: 0.55rem;
+}
+
+.ink-draft-text {
+  font-size: var(--read-size, 1.0625rem);
+  line-height: 2.05;
+  text-align: justify;
+  max-width: var(--read-col, 42em);
+  color: var(--fi-soft);
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-height: 22rem;
+  overflow: hidden;
+  mask-image: linear-gradient(to bottom, transparent 0, #000 2.4rem);
+}
+
+.ink-caret {
+  display: inline-block;
+  width: 3px;
+  height: 1em;
+  background: var(--fi-danger);
+  border-radius: 2px;
+  vertical-align: -0.12em;
+  margin-left: 2px;
+  animation: caret-hop 0.7s var(--fi-ease-out) infinite alternate;
+}
+
+/* ---------- 意图面板：便签栏首卡 ---------- */
+.intent-panel {
+  background: var(--fi-surface);
+  border: var(--fi-border);
+  border-radius: var(--fi-radius-md);
+  padding: 0.85rem 0.95rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.ip-mark {
+  display: inline-block;
+  align-self: flex-start;
+  font-family: var(--fi-display);
+  font-weight: 700;
+  font-size: 0.74rem;
+  color: var(--fi-text);
+  background: var(--fi-sky);
+  border: 2px solid var(--fi-outline);
+  border-radius: var(--fi-radius-pill);
+  letter-spacing: 0.05em;
+  padding: 0.06rem 0.55rem;
+  margin-bottom: 0.3rem;
+}
+
+.ip-row {
+  appearance: none;
+  font: inherit;
+  background: none;
+  border: 2px solid transparent;
+  border-radius: var(--fi-radius-sm);
+  padding: 0.28rem 0.35rem;
+  text-align: left;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  color: var(--fi-text);
+  transition: background-color 0.16s ease, border-color 0.16s ease;
+}
+
+.ip-row:hover {
+  background: var(--fi-surface);
+  border-color: var(--fi-line);
+}
+
+.ip-name {
+  font-size: 0.76rem;
+  font-weight: 600;
+  color: var(--fi-soft);
+  letter-spacing: 0.1em;
+}
+
+.ip-row:hover .ip-name {
+  color: var(--fi-warning);
+}
+
+.ip-value {
+  font-size: 0.86rem;
+  line-height: 1.65;
+  color: var(--fi-text);
+}
+
+/* 「· 改」后缀常驻占位、悬停才点亮：悬停时才插入 content 会把临界的长值
+   挤到下一行，整个面板被顶下去（拍板 2026-08-21）；visibility 隐藏保占位。 */
+.ip-row .ip-value:after {
+  content: " · 改";
+  color: var(--fi-faint);
+  font-size: 0.74rem;
+  visibility: hidden;
+}
+
+.ip-row:hover .ip-value:after {
+  visibility: visible;
+}
+
+.intent-panel.editing {
+  gap: 0.45rem;
+}
+
+.ip-label {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--fi-soft);
+  letter-spacing: 0.1em;
+}
+
+.ip-input {
+  width: 100%;
+  font-size: 0.92rem;
+  padding: 0.45rem 0.7rem;
+}
+
+.ip-input:focus {
+  outline: none;
+  background: var(--fi-surface);
+}
+
+.ip-acts {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}
+
+/* ---------- 身份转变卡/重选卡 ---------- */
+.role-card {
+  margin-top: 2.4rem;
+  background: var(--fi-bg);
+  border: var(--fi-border);
+  border-radius: var(--fi-radius-md);
+  padding: 1.7rem 1.6rem 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+
+.role-mark {
+  font-family: var(--fi-display);
+  font-weight: 700;
+  color: var(--fi-danger);
+  font-size: 0.85rem;
+  letter-spacing: 0.3em;
+}
+
+.role-title {
+  font-family: var(--fi-display);
+  font-weight: 700;
+  font-size: 1.25rem;
+  letter-spacing: 0.04em;
+}
+
+.role-desc {
+  font-size: 0.88rem;
+  color: var(--fi-soft);
+  line-height: 1.8;
+}
+
+.role-reason {
+  font-size: 0.85rem;
+  color: var(--fi-soft);
+}
+
+.role-mods {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem 0.6rem;
+  font-family: var(--fi-mono);
+  font-size: 0.78rem;
+  color: var(--fi-faint);
+}
+
+.role-card .imp-acts {
+  margin-top: 0.9rem;
+}
+
+.role-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  margin-top: 0.4rem;
+}
+
+.role-pick {
+  grid-template-columns: 1fr auto;
+}
+
+/* ============================================================
+   分级演算条（正文下方）：坐标纸保留的唯一属地
+   ============================================================ */
+.derive-strip {
+  margin-top: 2.2rem;
+  background:
+    repeating-linear-gradient(
+      to right,
+      var(--fi-grid-major) 0,
+      var(--fi-grid-major) 1px,
+      transparent 1px,
+      transparent calc(var(--fi-cell) * 4)
+    ),
+    repeating-linear-gradient(
+      to bottom,
+      var(--fi-grid-major) 0,
+      var(--fi-grid-major) 1px,
+      transparent 1px,
+      transparent calc(var(--fi-cell) * 4)
+    ),
+    repeating-linear-gradient(to right, var(--fi-grid) 0, var(--fi-grid) 1px, transparent 1px, transparent var(--fi-cell)),
+    repeating-linear-gradient(to bottom, var(--fi-grid) 0, var(--fi-grid) 1px, transparent 1px, transparent var(--fi-cell)),
+    var(--fi-cream);
+  border: var(--fi-border);
+  border-radius: var(--fi-radius-md);
+  padding: 1.1rem 1rem 0.9rem;
+  transition: background-color 0.3s ease;
+}
+
+.derive-strip .dots {
+  display: inline-block;
+  font-family: var(--fi-mono);
+  color: var(--fi-faint);
+  animation: dot-hop 0.55s var(--fi-ease-out) infinite alternate;
+}
+
+.ds-status {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 0.8rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--fi-soft);
+}
+
+.ds-progress {
+  font-family: var(--fi-mono);
+  font-size: 0.72rem;
+  font-weight: 400;
+  color: var(--fi-faint);
+  letter-spacing: 0.04em;
+}
+
+.ds-stop {
+  padding: 0.24rem 0.8rem;
+  font-size: 0.74rem;
+}
+
+/* ---------- 演算画布：AI 底层的真实数学 ---------- */
+.ms-canvas {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 0.7rem 1rem;
+  font-family: var(--fi-mono);
+  font-size: 0.78rem;
+  color: var(--fi-text);
+  min-height: 5.6rem;
+  margin-bottom: 0.55rem;
+}
+
+.ms-grid {
+  display: grid;
+  gap: 3px;
+}
+
+.ms-cell {
+  min-width: 2rem;
+  padding: 0.24rem 0.3rem;
+  text-align: center;
+  border: 2px solid var(--fi-line);
+  border-radius: var(--fi-radius-sm);
+  background: var(--fi-surface);
+  color: var(--fi-soft);
+  transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
+}
+
+/* 正在参与运算的行/列：黄油高亮 */
+.ms-cell.hl {
+  background: var(--fi-butter);
+  color: var(--fi-text);
+  border-color: var(--fi-outline);
+}
+
+/* 已算出的结果格：落墨 */
+.ms-cell.done {
+  background: var(--fi-ink);
+  color: var(--fi-on-ink);
+  border-color: var(--fi-outline);
+}
+
+/* 当前正在累加的结果格：墨点弹跳 */
+.ms-cell.acc {
+  border-color: var(--fi-outline);
+  animation: cell-hop 0.55s var(--fi-ease-out) infinite alternate;
+}
+
+.ms-op {
+  color: var(--fi-faint);
+  font-size: 0.95rem;
+}
+
+.ms-steps {
+  display: flex;
+  flex-direction: column;
+  gap: 0.28rem;
+  font-family: var(--fi-mono);
+  font-size: 0.78rem;
+  color: var(--fi-soft);
+  min-height: 2.4rem;
+  justify-content: center;
+}
+
+.ms-step {
+  transition: color 0.3s ease;
+}
+
+.ms-step.on {
+  color: var(--fi-text);
+}
+
+.ms-step b {
+  font-weight: 700;
+  color: var(--fi-text);
+}
+
+/* 条件概率构成条 */
+.ms-bar {
+  display: flex;
+  width: 15rem;
+  max-width: 100%;
+  height: 0.7rem;
+  border: var(--fi-border);
+  border-radius: var(--fi-radius-pill);
+  overflow: hidden;
+  margin: 0.2rem auto 0;
+  background: var(--fi-surface);
+}
+
+.ms-bar .seg-a {
+  background: var(--fi-ink);
+  transition: width 0.5s var(--fi-ease-out);
+}
+
+.ms-bar .seg-b {
+  background: var(--fi-sky);
+  opacity: 0.55;
+  transition: width 0.5s var(--fi-ease-out);
+}
+
+/* ============================================================
+   判词卡（Epitaph）
+   ============================================================ */
+.epitaph {
+  margin-top: 2.4rem;
+}
+
+.ep-frame {
+  background: var(--fi-bg);
+  border: var(--fi-border);
+  border-radius: var(--fi-radius-lg);
+  padding: 2.4rem 2.6rem 2.1rem;
+  transition: background-color 0.3s ease;
+}
+
+.ep-head {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  margin-bottom: 1.2rem;
+}
+
+.ep-line {
+  font-family: var(--fi-display);
+  font-size: 1.04rem;
+  line-height: 2.1;
+  letter-spacing: 0.04em;
+  color: var(--fi-text);
+}
+
+.ep-acts {
+  display: flex;
+  gap: 0.8rem;
+  margin-top: 1.6rem;
+}
+
+/* ============================================================
+   弹窗（原生 dialog · 白纸卡 + 弹入）
+   ============================================================ */
+.imp-dialog {
+  border: none;
+  padding: 0;
+  background: none;
+  max-width: min(26rem, calc(100vw - 2.5rem));
+  /* 全局 * { margin: 0 } 会压掉 UA 的 dialog:modal { margin: auto } 居中，
+     模态框因此钉死在视口左上角（还会压住头部拖拽区吞掉点击）——显式恢复。 */
+  margin: auto;
+  /* Electron 硬化：模态框即使与头部拖拽区重叠也保持可点。 */
+  -webkit-app-region: no-drag;
+}
+
+.imp-dialog::backdrop {
+  background: rgba(24, 20, 16, 0.5);
+}
+
+.imp-dialog[open] {
+  animation: imp-in 0.24s var(--fi-ease-spring);
+}
+
+/* 绘本弹入：缩放 + 淡入，轻过冲 */
+@keyframes imp-in {
+  from {
+    opacity: 0;
+    transform: scale(0.92);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.imp-frame {
+  background: var(--fi-surface);
+  border: var(--fi-border-hero);
+  border-radius: var(--fi-radius-lg);
+  padding: 1.9rem 2rem 1.7rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.1rem;
+}
+
+.imp-head {
+  font-family: var(--fi-display);
+  font-weight: 700;
+  font-size: 1.1rem;
+  letter-spacing: 0.06em;
+  color: var(--fi-text);
+}
+
+.imp-drop {
+  appearance: none;
+  font: inherit;
+  background: var(--fi-bg);
+  border: var(--fi-border);
+  border-style: dashed;
+  border-radius: var(--fi-radius-md);
+  padding: 1.9rem 1.2rem;
+  cursor: pointer;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  color: var(--fi-text);
+  transition: background-color 0.16s ease, transform 0.16s var(--fi-ease-spring);
+}
+
+.imp-drop:hover:not(:disabled) {
+  background: var(--fi-butter-soft);
+  border-style: solid;
+  transform: scale(1.02);
+}
+
+.imp-drop:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+.imp-drop-main {
+  font-family: var(--fi-display);
+  font-weight: 700;
+  font-size: 1.02rem;
+  letter-spacing: 0.04em;
+}
+
+.imp-drop-sub {
+  font-size: 0.8rem;
+  color: var(--fi-soft);
+}
+
+.imp-facts {
+  display: flex;
+  flex-direction: column;
+}
+
+.imp-facts > div {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 1rem;
+  padding: 0.55rem 0.2rem;
+  border-top: 1px solid var(--fi-line);
+}
+
+.imp-facts dt {
+  color: var(--fi-soft);
+}
+
+.imp-facts dd {
+  font-weight: 600;
+  text-align: right;
+}
+
+.imp-acts {
+  display: flex;
+  gap: 0.7rem;
+  justify-content: flex-end;
+  align-items: center;
+}
+
+/* 无前缀规则：ErrorBoundary 的崩溃兜底页不在 .cf-dialog 容器内，
+   也要有这段正文的字号/墨色/行距（加固轮 2026-08-21 修复样式失效）。 */
+.cf-detail,
+.cf-dialog .cf-detail {
+  font-size: 0.86rem;
+  color: var(--fi-soft);
+  margin: 0.4rem 0 0.9rem;
+  line-height: 1.75;
+}
+
+/* 角色卡/人物卡弹窗：放宽宽度钳制 */
+.char-dialog {
+  max-width: min(30rem, calc(100vw - 2.5rem));
+}
+
+.char-sec {
+  margin-top: 1rem;
+}
+
+.char-ladder {
+  margin-top: 0.4rem;
+}
+
+.char-list,
+.char-history {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  margin-top: 0.4rem;
+}
+
+.char-list li,
+.char-history li {
+  font-size: 0.84rem;
+  color: var(--fi-soft);
+  line-height: 1.65;
+  display: flex;
+  gap: 0.5rem;
+  align-items: baseline;
+}
+
+.char-tag {
+  font-family: var(--fi-mono);
+  font-size: 0.64rem;
+  font-weight: 700;
+  color: var(--fi-soft);
+  border: 1.5px solid var(--fi-line);
+  border-radius: var(--fi-radius-pill);
+  padding: 0.02rem 0.4rem;
+  flex-shrink: 0;
+  letter-spacing: 0.08em;
+}
+
+.char-tag-learned {
+  color: var(--fi-success);
+  border-color: var(--fi-success);
+  background: var(--fi-success-soft);
+}
+
+.char-tag-item {
+  color: var(--fi-danger);
+  border-color: var(--fi-danger);
+  background: var(--fi-danger-soft);
+}
+
+.char-tag-journal {
+  color: var(--fi-faint);
+}
+
+.char-turn {
+  font-family: var(--fi-mono);
+  font-size: 0.7rem;
+  color: var(--fi-faint);
+  flex-shrink: 0;
+}
+
+.char-prose {
+  font-size: 0.92rem;
+  line-height: 1.85;
+  color: var(--fi-text);
+  margin: 0;
+}
+
+.char-empty {
+  font-size: 0.8rem;
+  color: var(--fi-faint);
+  margin-top: 0.4rem;
+}
+
+/* 五维/境界/实体类别芯片：胶囊 */
+.bf-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  margin-top: 0.55rem;
+}
+
+.bf-chip {
+  appearance: none;
+  font-family: var(--fi-font);
+  font-size: 0.84rem;
+  font-weight: 600;
+  color: var(--fi-soft);
+  background: var(--fi-surface);
+  border: 2px solid var(--fi-line);
+  border-radius: var(--fi-radius-pill);
+  padding: 0.24rem 0.75rem;
+  transition: color 0.16s ease, border-color 0.16s ease, background-color 0.16s ease,
+    transform 0.16s var(--fi-ease-spring);
+}
+
+button.bf-chip {
+  cursor: pointer;
+}
+
+button.bf-chip:hover {
+  color: var(--fi-text);
+  border-color: var(--fi-outline);
+  transform: scale(1.05);
+}
+
+button.bf-chip:active {
+  transform: scale(0.94);
+}
+
+/* 选中态（弹窗按钮）黄油标亮；继承倾向（转世静态标签）琥珀标亮 */
+.bf-chip.on {
+  color: var(--fi-text);
+  border-color: var(--fi-outline);
+  background: var(--fi-butter);
+}
+
+.bf-chip.tilt {
+  color: var(--fi-warning);
+  border-color: var(--fi-warning);
+}
+
+/* ============================================================
+   开题（建角向导）：白纸卡表单
+   ============================================================ */
+.cre-head {
+  display: flex;
+  align-items: center;
+  gap: 1.4rem;
+  padding: 0.8rem clamp(1.2rem, 4vw, 3rem);
+  border-bottom: var(--fi-border);
+  background: var(--fi-bg);
+}
+
+.cre-title {
+  font-family: var(--fi-display);
+  font-weight: 700;
+  font-size: 1.15rem;
+  letter-spacing: 0.15em;
+  margin-left: auto;
+  margin-right: 7.4rem; /* 让位窗口控制 */
+}
+
+.cre-stage {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  padding: clamp(0.9rem, 2.2vw, 1.8rem);
+}
+
+.cre-sheet {
+  width: 100%;
+  max-width: 37rem;
+  background: var(--fi-surface);
+  border: var(--fi-border-hero);
+  border-radius: var(--fi-radius-lg);
+  padding: clamp(1.8rem, 3.5vw, 2.6rem);
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+  transition: background-color 0.3s ease;
+}
+
+.cre-q {
+  font-family: var(--fi-display);
+  font-weight: 700;
+  font-size: 1.7rem;
+  letter-spacing: 0.1em;
+}
+
+.cre-hint {
+  color: var(--fi-soft);
+  margin-bottom: 0.8rem;
+}
+
+.cre-wait {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+/* 词旁选单候选行 */
+.cand {
+  appearance: none;
+  font: inherit;
+  text-align: left;
+  background: var(--fi-surface);
+  border: var(--fi-border);
+  border-radius: var(--fi-radius-md);
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 0.9rem;
+  padding: 0.8rem 1rem;
+  cursor: pointer;
+  color: var(--fi-text);
+  transition: background-color 0.16s ease, transform 0.16s var(--fi-ease-spring);
+}
+
+.cand:hover {
+  background: var(--fi-butter-soft);
+  transform: translateX(2px);
+}
+
+.cand .tick {
+  width: 1.4rem;
+  height: 3px;
+  border-radius: var(--fi-radius-pill);
+  background: var(--fi-line);
+  transform: scaleX(0.65);
+  transform-origin: left center;
+  transition: transform 0.24s var(--fi-ease-spring), background-color 0.24s ease;
+}
+
+.cand:hover .tick {
+  transform: scaleX(1);
+  background: var(--fi-warning);
+}
+
+.cand-v {
+  font-family: var(--fi-display);
+  font-weight: 600;
+  font-size: 1.08rem;
+}
+
+.cand-note {
+  font-size: 0.78rem;
+  color: var(--fi-faint);
+  text-align: right;
+}
+
+.cre-err {
+  color: var(--fi-danger);
+  font-weight: 600;
+  font-size: 0.88rem;
+}
+
+.cre-sheet .imp-acts {
+  margin-top: 1.4rem;
+}
+
+/* 词旁选单：贴着被点的值浮出的白卡 */
+.cre-drop-veil {
+  position: fixed;
+  inset: 0;
+  z-index: 24;
+  background: none;
+}
+
+.cre-drop {
+  position: fixed;
+  z-index: 25;
+  background: var(--fi-surface);
+  border: var(--fi-border);
+  border-radius: var(--fi-radius-md);
+  box-shadow: 0 10px 0 rgba(24, 20, 16, 0.14); /* 浮层允许一层平贴投影：无模糊纯位移 */
+  max-height: 15rem;
+  overflow-y: auto;
+  padding: 0.4rem;
+  min-width: 12rem;
+  max-width: min(26rem, calc(100vw - 2rem));
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+/* 建角表单：行式字段 */
+.cre-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  margin-top: 0.9rem;
+  min-width: 0;
+}
+
+.cre-label {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--fi-soft);
+  letter-spacing: 0.1em;
+}
+
+.cre-gender {
+  display: flex;
+  gap: 0.6rem;
+  padding-top: 0.15rem;
+}
+
+/* 性别两键：均分大按钮（骨架重构：开题卡内的主角控件） */
+.cre-g {
+  appearance: none;
+  font: inherit;
+  font-weight: 600;
+  font-size: 1.05rem;
+  letter-spacing: 0.2em;
+  border: var(--fi-border);
+  background: var(--fi-surface);
+  color: var(--fi-text);
+  padding: 0.62rem 1.2rem;
+  flex: 1;
+  text-align: center;
+  border-radius: var(--fi-radius-md);
+  cursor: pointer;
+  transition: background-color 0.16s ease, transform 0.16s var(--fi-ease-spring);
+}
+
+.cre-g:hover {
+  background: var(--fi-butter-soft);
+  transform: scale(1.04);
+}
+
+.cre-g.on {
+  background: var(--fi-butter);
+}
+
+/* 落点/境界当前值按钮：奶油井里的描边值 */
+.cre-pick {
+  appearance: none;
+  font: inherit;
+  font-family: var(--fi-display);
+  font-weight: 700;
+  font-size: 1.1rem;
+  color: var(--fi-text);
+  background: var(--fi-bg);
+  border: var(--fi-border);
+  border-radius: var(--fi-radius-sm);
+  padding: 0.45rem 0.85rem;
+  text-align: left;
+  cursor: pointer;
+  align-self: flex-start;
+  min-width: 8rem;
+  transition: background-color 0.16s ease, transform 0.16s var(--fi-ease-spring);
+}
+
+.cre-pick:hover {
+  background: var(--fi-butter-soft);
+  transform: scale(1.02);
+}
+
+/* 姓名/入世之志：井式输入 */
+.cre-wish-input {
+  width: 100%;
+  font-family: var(--fi-display);
+  font-size: 1.25rem;
+  letter-spacing: 0.04em;
+  padding: 0.5rem 0.85rem;
+}
+
+.cre-wish-input:focus {
+  outline: none;
+  background: var(--fi-surface);
+}
+
+.cre-base-note {
+  font-size: 0.8rem;
+  color: var(--fi-faint);
+  margin-top: 0.8rem;
+  line-height: 1.7;
+}
+
+/* ============================================================
+   文房：白纸卡分组
+   ============================================================ */
+.studio {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+.studio-body {
+  flex: 1;
+  width: min(62rem, 100%);
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: 13rem 1fr;
+  gap: 0 2.2rem;
+  padding: 2rem clamp(1rem, 3vw, 2.5rem) 3rem;
+}
+
+.studio-catalog {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  align-self: start;
+  position: sticky;
+  top: 4.6rem;
+  /* 侧栏卡轨（骨架重构 2026-08-21）：目录本身是一张竖卡 */
+  background: var(--fi-surface);
+  border: var(--fi-border);
+  border-radius: var(--fi-radius-md);
+  padding: 0.5rem;
+}
+
+.cat-item {
+  appearance: none;
+  font: inherit;
+  text-align: left;
+  background: var(--fi-surface);
+  border: var(--fi-border);
+  border-radius: var(--fi-radius-md);
+  padding: 0.6rem 0.9rem;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 0.12rem;
+  color: var(--fi-soft);
+  transition: background-color 0.16s ease, color 0.16s ease, transform 0.16s var(--fi-ease-spring);
+}
+
+.cat-item:hover {
+  color: var(--fi-text);
+  transform: translateX(2px);
+}
+
+.cat-item.cur {
+  background: var(--fi-butter);
+  color: var(--fi-text);
+}
+
+.cat-label {
+  font-family: var(--fi-display);
+  font-weight: 700;
+  font-size: 0.98rem;
+}
+
+.cat-note {
+  font-size: 0.72rem;
+  color: var(--fi-faint);
+}
+
+.studio-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  min-width: 0;
+}
+
+/* 账目行：白纸卡 */
+.ink-card,
+.brush-card {
+  background: var(--fi-surface);
+  border: var(--fi-border);
+  border-radius: var(--fi-radius-md);
+  padding: 1.25rem 1.3rem 1.15rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+}
+
+.ink-head {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+}
+
+.dot {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--fi-faint);
+  border: 2px solid var(--fi-outline);
+  align-self: center;
+  flex-shrink: 0;
+}
+
+.dot.ok {
+  background: var(--fi-success);
+}
+
+.dot.testing {
+  background: var(--fi-warning);
+  animation: dot-hop 0.55s var(--fi-ease-out) infinite alternate;
+}
+
+.ink-name {
+  font-family: var(--fi-display);
+  font-weight: 700;
+}
+
+.ink-status {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--fi-soft);
+  margin-left: auto;
+}
+
+.ink-key {
+  font-family: var(--fi-mono);
+  font-size: 0.8rem;
+  color: var(--fi-soft);
+  background: var(--fi-bg);
+  border-radius: var(--fi-radius-sm);
+  padding: 0.5rem 0.7rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ink-acts {
+  display: flex;
+  gap: 0.6rem;
+}
+
+.ink-acts .ink-input {
+  font-size: 0.82rem;
+  padding: 0.45rem 0.7rem;
+}
+
+.ink-empty {
+  padding: 0.2rem 0.1rem 0.6rem;
+  color: var(--fi-soft);
+}
+
+.ink-warn {
+  color: var(--fi-danger);
+  padding: 0.4rem 0.2rem;
+}
+
+.ink-add-row {
+  display: flex;
+  justify-content: flex-end;
+  padding: 0.2rem 0 0.6rem;
+}
+
+.ink-add-opts {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  margin: 0.9rem 0;
+}
+
+.ink-add-opt {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 1rem;
+  border: var(--fi-border);
+  border-radius: var(--fi-radius-md);
+  background: var(--fi-surface);
+  color: var(--fi-text);
+  padding: 0.65rem 0.9rem;
+  cursor: pointer;
+  transition: background-color 0.16s ease, transform 0.16s var(--fi-ease-spring);
+}
+
+.ink-add-opt:hover {
+  transform: translateX(2px);
+}
+
+.ink-add-opt.cur {
+  background: var(--fi-butter);
+}
+
+.ink-add-name {
+  font-family: var(--fi-display);
+  font-weight: 700;
+}
+
+.ink-add-opt .ink-add-host {
+  font-family: var(--fi-mono);
+  font-size: 0.76rem;
+  color: var(--fi-soft);
+}
+
+.ink-add-url {
+  width: 100%;
+  margin: 0.2rem 0 0.6rem;
+  font-family: var(--fi-mono);
+  font-size: 0.84rem;
+  padding: 0.5rem 0.7rem;
+}
+
+.brush-head {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-family: var(--fi-display);
+  font-weight: 700;
+}
+
+.mini-badge {
+  display: inline-grid;
+  place-items: center;
+  width: 1.7rem;
+  height: 1.7rem;
+  background: var(--fi-butter);
+  border: var(--fi-border);
+  border-radius: 50%;
+  color: var(--fi-text);
+  font-family: var(--fi-display);
+  font-weight: 700;
+  font-size: 0.82rem;
+  flex-shrink: 0;
+}
+
+.brush-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  border-top: 1px solid var(--fi-line);
+  padding-top: 0.8rem;
+}
+
+.brush-l {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--fi-text);
+}
+
+.brush-select {
+  font-family: var(--fi-mono);
+  font-size: 0.84rem;
+  padding: 0.45rem 0.7rem;
+  cursor: pointer;
+  min-width: 12rem;
+}
+
+.brush-select:hover {
+  background: var(--fi-surface);
+}
+
+option {
+  background: var(--fi-surface);
+  color: var(--fi-text);
+}
+
+.brush-free {
+  cursor: text;
+}
+
+/* 拨杆开关：胶囊轨道 + 圆钮 */
+.toggle {
+  appearance: none;
+  font: inherit;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: var(--fi-surface);
+  border: var(--fi-border);
+  border-radius: var(--fi-radius-pill);
+  padding: 0.28rem 0.7rem;
+  cursor: pointer;
+  color: var(--fi-soft);
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.toggle .toggle-knob {
+  width: 0.8rem;
+  height: 0.8rem;
+  background: var(--fi-faint);
+  border: 2px solid var(--fi-outline);
+  border-radius: 50%;
+  transition: background-color 0.25s var(--fi-ease-spring), transform 0.25s var(--fi-ease-spring);
+}
+
+.toggle.on {
+  background: var(--fi-butter);
+  color: var(--fi-text);
+}
+
+.toggle.on .toggle-knob {
+  background: var(--fi-danger);
+  transform: translateX(0.5rem);
+}
+
+.toggle-l {
+  font-size: 0.76rem;
+  font-weight: 600;
+}
+
+.bake-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--fi-surface);
+  border: var(--fi-border);
+  border-radius: var(--fi-radius-md);
+  padding: 1.1rem 1.3rem;
+}
+
+.bake-conc {
+  min-width: 0;
+  width: 6rem;
+  text-align: center;
+}
+
+.studio-note {
+  font-size: 0.82rem;
+  color: var(--fi-soft);
+  line-height: 1.7;
+}
+
+.studio-locknote {
+  color: var(--fi-soft);
+  padding: 0.9rem clamp(1.2rem, 4vw, 3rem) 0;
+}
+
+.studio-foot {
+  position: sticky;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 1rem;
+  padding: 0.8rem clamp(1.2rem, 4vw, 3rem);
+  border-top: var(--fi-border);
+  background: var(--fi-bg);
+  transition: background-color 0.3s ease;
+}
+
+.save-note {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--fi-success);
+}
+
+.usage-error {
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+  align-items: flex-start;
+}
+
+/* ============================================================
+   跨世编年史：奶油画布上的四张白卡
+   ============================================================ */
+.app.chronicle {
+  position: fixed;
+  inset: 0;
+  z-index: 25;
+  overflow-y: auto;
+  background: var(--fi-bg);
+}
+
+.chron-body {
+  width: min(46rem, 100%);
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 1.4rem;
+  padding-bottom: 4rem;
+}
+
+.chron-sec {
+  background: var(--fi-surface);
+  border: var(--fi-border);
+  border-radius: var(--fi-radius-md);
+  padding: 1.25rem 1.4rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.chron-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.chron-item {
+  font-size: 0.95rem;
+  line-height: 1.85;
+  color: var(--fi-text);
+  display: flex;
+  gap: 0.8rem;
+  align-items: baseline;
+}
+
+.chron-item.red {
+  color: var(--fi-danger);
+}
+
+.chron-item.growth,
+.chron-item .emergent {
+  color: var(--fi-success);
+}
+
+.chron-day {
+  font-family: var(--fi-mono);
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--fi-soft);
+  background: var(--fi-bg);
+  border-radius: var(--fi-radius-pill);
+  padding: 0.05rem 0.55rem;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.chron-empty {
+  font-size: 0.88rem;
+  color: var(--fi-faint);
+}
+
+/* ============================================================
+   起稿 HUD：左下角白色胶囊行
+   ============================================================ */
+.bake-hud {
+  position: fixed;
+  left: 1.2rem;
+  bottom: 1.2rem;
+  z-index: 40;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.45rem;
+  max-width: min(26rem, calc(100vw - 2.4rem));
+}
+
+.bake-line {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0;
+  background: var(--fi-surface);
+  border: var(--fi-border);
+  border-radius: var(--fi-radius-pill);
+  padding: 0.32rem 0.9rem;
+  font-size: 0.82rem;
+  color: var(--fi-soft);
+}
+
+.bake-title {
+  font-family: var(--fi-display);
+  font-weight: 700;
+  font-size: 0.86rem;
+  color: var(--fi-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 14rem;
+}
+
+.bake-title.err {
+  color: var(--fi-danger);
+}
+
+.bake-percent {
+  font-family: var(--fi-mono);
+  font-size: 0.76rem;
+  font-weight: 700;
+  color: var(--fi-text);
+  min-width: 2.8em;
+  text-align: right;
+  flex-shrink: 0;
+}
+
+.bake-done-link {
+  appearance: none;
+  font: inherit;
+  font-family: var(--fi-display);
+  font-weight: 700;
+  font-size: 0.86rem;
+  background: none;
+  border: none;
+  color: var(--fi-text);
+  cursor: pointer;
+  border-radius: var(--fi-radius-pill);
+  padding: 0.05rem 0.4rem;
+  transition: background-color 0.15s ease;
+}
+
+.bake-done-link:hover {
+  background: var(--fi-butter-soft);
+  color: var(--fi-text);
+}
+
+.bake-x {
+  appearance: none;
+  background: none;
+  border: none;
+  padding: 0 0.15em;
+  font-size: 0.7rem;
+  line-height: 1;
+  color: var(--fi-faint);
+  border-radius: var(--fi-radius-sm);
+  cursor: pointer;
+  transition: color 0.15s ease;
+}
+
+.bake-x:hover {
+  color: var(--fi-danger);
+}
+
+/* ============================================================
+   数学语汇原语
+   ============================================================ */
+.fx-bar {
+  display: flex;
+  width: 100%;
+  height: 0.6rem;
+  border: var(--fi-border);
+  border-radius: var(--fi-radius-pill);
+  overflow: hidden;
+  background: var(--fi-surface);
+}
+
+.fx-bar .seg-a {
+  background: var(--fi-ink);
+  transition: width 0.5s var(--fi-ease-out);
+}
+
+.fx-bar .seg-b {
+  background: var(--fi-sky);
+  opacity: 0.5;
+  transition: width 0.5s var(--fi-ease-out);
+}
+
+/* 起稿 HUD 用朱红前景段 */
+.fx-bar.hot .seg-a {
+  background: var(--fi-danger);
+}
+
+.fx-num {
+  font-family: var(--fi-mono);
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+}
+
+/* ============================================================
+   术语问号 tooltip：白卡描边
+   ============================================================ */
+.tip {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  margin-left: 0.3em;
+}
+
+.tip-mark {
+  appearance: none;
+  background: var(--fi-surface);
+  border: 1.5px solid var(--fi-line);
+  border-radius: 50%;
+  padding: 0 0.32em;
+  font-family: var(--fi-mono);
+  font-size: 0.68rem;
+  font-weight: 700;
+  line-height: 1.3;
+  color: var(--fi-soft);
+  cursor: help;
+  transition: color 0.15s ease, border-color 0.15s ease, background-color 0.15s ease;
+}
+
+.tip:hover .tip-mark,
+.tip-mark:focus-visible {
+  color: var(--fi-text);
+  border-color: var(--fi-outline);
+  background: var(--fi-butter);
+}
+
+/* 卡片由 Hint.jsx 经 portal 挂到 body/dialog，fixed 坐标与边缘翻转都是
+   JS 内联给的；这里只管皮相与显隐过渡。 */
+.tip-card {
+  position: fixed;
+  width: max-content;
+  max-width: min(15rem, calc(100vw - 2rem));
+  background: var(--fi-surface);
+  border: var(--fi-border);
+  border-radius: var(--fi-radius-sm);
+  box-shadow: 0 6px 0 rgba(24, 20, 16, 0.12); /* 浮层允许一层平贴投影 */
+  z-index: 45;
+  font-size: 0.8rem;
+  line-height: 1.65;
+  text-align: left;
+  color: var(--fi-text);
+  padding: 0.5rem 0.75rem;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s ease;
+}
+
+.tip-card.is-open {
+  opacity: 1;
+}
+
+/* ---------- 全局提示条：墨底奶油字胶囊 ---------- */
+.global-note {
+  position: fixed;
+  left: 50%;
+  bottom: 1.6rem;
+  transform: translateX(-50%);
+  z-index: 30;
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--fi-on-ink);
+  background: var(--fi-ink);
+  border: 2px solid var(--fi-outline);
+  border-radius: var(--fi-radius-pill);
+  padding: 0.55rem 1.3rem;
+  max-width: min(30rem, calc(100vw - 3rem));
+}
+
+/* ============================================================
+   无边框窗口拖拽：各页头部条是拖拽区，头部里的控件一概豁免
+   ============================================================ */
+.topbar,
+.desk-head,
+.cre-head {
+  -webkit-app-region: drag;
+}
+
+.topbar button,
+.topbar input,
+.topbar select,
+.topbar textarea,
+.topbar .theme-toggle,
+.desk-head button,
+.desk-head input,
+.desk-head select,
+.desk-head textarea,
+.cre-head button,
+.cre-head input,
+.cre-head select,
+.cre-head textarea {
+  -webkit-app-region: no-drag;
+}
+
+/* ---------- 绘本运动关键帧 ---------- */
+/* 忙点弹跳（derive 状态/展卷中/试墨） */
+@keyframes dot-hop {
+  from {
+    transform: translateY(0);
+  }
+  to {
+    transform: translateY(-3px);
+  }
+}
+
+@keyframes caret-hop {
+  from {
+    transform: translateY(0);
+  }
+  to {
+    transform: translateY(-2px);
+  }
+}
+
+@keyframes cell-hop {
+  from {
+    transform: translateY(0);
+  }
+  to {
+    transform: translateY(-2px);
+  }
+}
+
+/* ============================================================
+   窄屏适配
+   ============================================================ */
+@media (max-width: 1080px) {
+  /* 推演台降单栏：便签栏落到书页卡下方，横排贴纸 */
+  .stage {
+    grid-template-columns: 1fr;
+    width: min(62rem, 100%);
+  }
+
+  .margin-col {
+    position: static;
+    max-height: none;
+    overflow: visible;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr));
+    align-items: start;
+  }
+
+  .studio-body {
+    grid-template-columns: 1fr;
+  }
+
+  .studio-catalog {
+    position: static;
+    flex-direction: row;
+    gap: 0.45rem;
+    overflow-x: auto;
+  }
+
+  .cat-item {
+    flex-shrink: 0;
+  }
+}
+
+@media (max-width: 640px) {
+  /* 触屏无悬停：书卡操作常显 */
+  .fx-acts {
+    opacity: 0.9;
+    transform: none;
+  }
+
+  .fx-list {
+    grid-template-columns: 1fr;
+  }
+
+  .desk-head {
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .cand {
+    grid-template-columns: auto 1fr;
+  }
+
+  .cand-note {
+    grid-column: 2;
+    text-align: left;
+  }
+
+  .opt .cand-note {
+    padding-right: 0;
+  }
+
+  .brush-select {
+    min-width: 0;
+    width: 11rem;
+  }
+
+  .desk-toolbar {
+    flex-direction: column;
+    gap: 0.6rem;
+    align-items: flex-start;
+  }
+
+  .topbar .chapter {
+    display: none;
+  }
+
+  .topbar .right {
+    gap: 0.5rem;
+  }
+
+  .opt .hint {
+    display: none;
+  }
+
+  .prose {
+    font-size: 1rem;
+  }
+}
+
+/* ============================================================
+   减动效：CSS 层归零
+   ============================================================ */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition: none !important;
+    animation: none !important;
+  }
+}

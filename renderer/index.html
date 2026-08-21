@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'"
+    />
+    <title>推演书</title>
+    <script>
+      // 预上色：夜间用户不闪白纸（在 CSS 生效前定主题）。
+      // 读键顺序与 App.jsx 的 readLocalPref 迁移对齐：cp- 新键优先，
+      // 更名前的 lj- 旧键兜底（读到即被 App 搬走，此后只剩 cp-）。
+      (function () {
+        var t = null;
+        try {
+          t = localStorage.getItem("cp-theme") || localStorage.getItem("lj-theme");
+        } catch (e) {}
+        if (t !== "paper" && t !== "night") {
+          t = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches ? "night" : "paper";
+        }
+        document.documentElement.dataset.theme = t;
+      })();
+    </script>
+  </head>
+  <body>
+    <!--
+      方向契约 · seed: fiction-yansuan-zhi（用户钉死方向，弃 neobrutalism 稿）
+      THESIS: 界面是一本摊开的绘本——暖奶油画布、白纸卡、粗黑描边、饱和
+      色块、大圆角、扁平无阴影；层级靠描边与色差，动效是弹跳与挤压。
+      拒绝的默认排布：卡片阴影堆、细线 hairline 分隔、图标装饰、无衬线灰白
+      后台簇、逐字入墨的手稿式含蓄。
+      OWN-WORLD: 令牌源 fiction/DESIGN.md（#FFE9CE/#FFFFFF/#111827/#222222
+      + 派生天空蓝/黄油黄）；Cossette Texte/Titre + JetBrains Mono 本地打包，
+      汉字回退系统圆体；演算坐标纸仅在 DeriveStrip 内部存续。
+      STORY: 玩家读懂「我的每个字都在被演算」：案头书架取书→开题定角色→
+      落笔→演算条真实数学逐行弹算→解法卡→暗骰红圈落定→后果以黄油马克笔
+      高亮留在正文里，殁则朱红印章弹落结案。
+      FIRST VIEWPORT: 案头——「推演书」圆体大字与副题之下，白色圆角书卡
+      （黄油圆徽章编号 + 虚线白卷入口），底缘工具条（导入/文房/排版）；
+      点书进入开题与推演台（白纸大卡 3px 描边大圆角）。
+      FORM: 用户钉选「Fiction 绘本风」（typeui.sh 技能包）。双主题：米纸/夜稿。
+      FINISH: unreviewed and undocumented is unfinished; this build ends with
+      the finish review, the verdict, DESIGN.md, and every shipping raster
+      carrying its provenance.
+    -->
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
+</html>

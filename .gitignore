@@ -1,0 +1,42 @@
+# 依赖与构建产物
+node_modules/
+dist/
+
+# 环境变量与密钥文件（预防性：本仓库不使用 .env，但防止未来误提交）
+.env
+.env.*
+*.pem
+*.key
+*.p8
+*.p12
+
+# 本地 scratch 工作区（含真实 API Key，绝不入库）
+.scratch/
+
+# Agent/IDE 本地配置与历史（含本机路径）
+.reasonix/
+reasonix.toml
+.playwright-mcp/
+rushu/
+.zcode/
+.mimosa/
+.codex/
+_dsh_*.txt
+
+# 日志与临时文件
+*.log
+npm-debug.log*
+.DS_Store
+Thumbs.db
+
+# 截图帧与本地检查产物
+.shots/
+.esbuild-check/
+.impeccable/
+
+# 打包输出（release/ 与各备用输出目录 release-*/）
+release*/
+build/.icon-sizes/
+
+# 本机 Agent 技能库（个人配置，不入库）
+.agents/
