@@ -28,7 +28,7 @@
 
 ## 下载
 
-[最新 Release](https://github.com/AureliaKae/CalculationBook/releases)，Windows 安装包与便携版都有。
+[最新 Release](https://github.com/AureliaKae/CalculationBook/releases)。
 
 ## 开始之前
 
