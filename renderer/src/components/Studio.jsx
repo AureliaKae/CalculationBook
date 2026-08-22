@@ -22,8 +22,8 @@ const PANELS = [
 // 添加墨行的厂商预设：与主进程保存侧白名单（assertSecureEndpoint/
 // assertKnownEndpoint）同源（src/providers.js 注册表），http 只放行本机调试。
 const PROVIDER_PRESETS = [
-  ...VENDOR_SHOPS.map((shop) => ({ id: shop.id, label: shop.label, baseUrl: shop.baseUrl })),
-  { id: "local", label: "本机调试地址", baseUrl: "" },
+  ...VENDOR_SHOPS.map((shop) => ({ id: shop.id, label: shop.label, short: shop.short, baseUrl: shop.baseUrl })),
+  { id: "local", label: "本机调试地址", short: "本机调试", baseUrl: "" },
 ];
 
 // 新墨行 id 沿用 settings-schema 的 cred-N 避让约定（缺省 id 生成时避开
@@ -462,7 +462,7 @@ export default function Studio({ locked = false, settings, onSettingsSaved, onBa
                     setAddError("");
                   }}
                 >
-                  <span className="ink-add-name">{preset.label}</span>
+                  <span className="ink-add-name">{preset.short ?? preset.label}</span>
                 </button>
               ))}
             </div>

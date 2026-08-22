@@ -2635,12 +2635,13 @@ button.bf-chip:active {
   padding: 0.2rem 0 0.6rem;
 }
 
-/* 添加墨行的厂商预设：双列紧凑芯片（多厂商后从单列改版——窄弹窗里
-   「名称+完整 URL」同行会被长地址撑破；地址改由下方单行提示显示）。 */
+/* 添加墨行的厂商预设：一行五个的芯片网格（多厂商后从单列改版——窄弹窗里
+   「名称+完整 URL」同行会被长地址撑破；地址改由下方单行提示显示，省略号
+   截断保证换厂商时高度不跳）。 */
 .ink-add-opts {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(9.5rem, 1fr));
-  gap: 0.45rem;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 0.4rem;
   margin: 0.9rem 0 0.5rem;
 }
 
@@ -2652,7 +2653,7 @@ button.bf-chip:active {
   border-radius: var(--fi-radius-md);
   background: var(--fi-surface);
   color: var(--fi-text);
-  padding: 0.65rem 0.5rem;
+  padding: 0.55rem 0.25rem;
   cursor: pointer;
   transition: background-color 0.16s ease, transform 0.16s var(--fi-ease-spring);
 }
@@ -2668,7 +2669,8 @@ button.bf-chip:active {
 .ink-add-name {
   font-family: var(--fi-display);
   font-weight: 700;
-  font-size: 0.9rem;
+  font-size: 0.82rem;
+  white-space: nowrap;
 }
 
 /* 选中预设的端点地址：单行小字提示（本机调试时换成占位说明） */
@@ -2677,7 +2679,9 @@ button.bf-chip:active {
   font-size: 0.74rem;
   color: var(--fi-faint);
   text-align: center;
-  overflow-wrap: anywhere;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
   margin: 0 0 0.2rem;
 }
 

@@ -42,6 +42,7 @@ export const PROVIDERS = [
   {
     id: "kimi",
     label: "月之暗面 Kimi",
+    short: "Kimi",
     baseUrl: "https://api.moonshot.cn/v1",
     hosts: ["moonshot.cn", "moonshot.ai"],
     models: { fast: "kimi-k2-turbo-preview", strong: "kimi-k2-0711-preview" },
@@ -69,7 +70,8 @@ export const PROVIDERS = [
 ];
 
 // 界面下拉的供应商预设（client.js 转出给渲染层，本机调试地址由界面自加）。
-export const PROVIDER_PRESETS = PROVIDERS.map(({ id, label, baseUrl }) => ({ id, label, baseUrl }));
+// short 是芯片场景的短名（添加墨行一行五个时全名放不下才需要）。
+export const PROVIDER_PRESETS = PROVIDERS.map(({ id, label, short, baseUrl }) => ({ id, label, short, baseUrl }));
 
 function hostOf(rawUrl) {
   const raw = String(rawUrl ?? "").trim();
