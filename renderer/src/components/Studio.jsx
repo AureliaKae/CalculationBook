@@ -463,10 +463,13 @@ export default function Studio({ locked = false, settings, onSettingsSaved, onBa
                   }}
                 >
                   <span className="ink-add-name">{preset.label}</span>
-                  <span className="mono ink-add-host">{preset.baseUrl || "http://localhost…"}</span>
                 </button>
               ))}
             </div>
+            <p className="ink-add-hint">
+              {PROVIDER_PRESETS.find((preset) => preset.id === picked)?.baseUrl ||
+                "http://localhost…（仅限本机 http 调试地址）"}
+            </p>
             {picked === "local" && (
               <input
                 className="pen-input mono ink-add-url"

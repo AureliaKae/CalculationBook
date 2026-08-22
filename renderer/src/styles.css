@@ -2635,29 +2635,30 @@ button.bf-chip:active {
   padding: 0.2rem 0 0.6rem;
 }
 
+/* 添加墨行的厂商预设：双列紧凑芯片（多厂商后从单列改版——窄弹窗里
+   「名称+完整 URL」同行会被长地址撑破；地址改由下方单行提示显示）。 */
 .ink-add-opts {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(9.5rem, 1fr));
   gap: 0.45rem;
-  margin: 0.9rem 0;
+  margin: 0.9rem 0 0.5rem;
 }
 
 .ink-add-opt {
   display: flex;
-  justify-content: space-between;
-  align-items: baseline;
-  gap: 1rem;
+  justify-content: center;
+  align-items: center;
   border: var(--fi-border);
   border-radius: var(--fi-radius-md);
   background: var(--fi-surface);
   color: var(--fi-text);
-  padding: 0.65rem 0.9rem;
+  padding: 0.65rem 0.5rem;
   cursor: pointer;
   transition: background-color 0.16s ease, transform 0.16s var(--fi-ease-spring);
 }
 
 .ink-add-opt:hover {
-  transform: translateX(2px);
+  transform: translateY(-1px);
 }
 
 .ink-add-opt.cur {
@@ -2667,12 +2668,17 @@ button.bf-chip:active {
 .ink-add-name {
   font-family: var(--fi-display);
   font-weight: 700;
+  font-size: 0.9rem;
 }
 
-.ink-add-opt .ink-add-host {
+/* 选中预设的端点地址：单行小字提示（本机调试时换成占位说明） */
+.ink-add-hint {
   font-family: var(--fi-mono);
-  font-size: 0.76rem;
-  color: var(--fi-soft);
+  font-size: 0.74rem;
+  color: var(--fi-faint);
+  text-align: center;
+  overflow-wrap: anywhere;
+  margin: 0 0 0.2rem;
 }
 
 .ink-add-url {
