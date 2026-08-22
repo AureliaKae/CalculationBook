@@ -260,15 +260,23 @@ export function submitStyleTool() {
 }
 
 export function submitBatchExtractTool() {
+  // 条数与长度上限是粗读的省钱闸:输出 token 单价通常是输入的好几倍,
+  // 而下游 digestCoarse/正典账本都会再裁剪——多产出的部分纯属白烧。
+  const cappedList = (label) => ({
+    type: "array",
+    maxItems: 12,
+    description: `至多 12 条，只挑本片段最重要的${label}，每条一句话。`,
+    items: { type: "object", additionalProperties: true },
+  });
   return tool("submit_batch_extract", "提交小说片段的粗读提取:角色、地点、势力、关键事件与事实。", {
     type: "object",
     properties: {
-      characters: { type: "array", items: { type: "object", additionalProperties: true } },
-      locations: { type: "array", items: { type: "object", additionalProperties: true } },
-      factions: { type: "array", items: { type: "object", additionalProperties: true } },
-      events: { type: "array", items: { type: "object", additionalProperties: true } },
-      facts: { type: "array", items: { type: "object", additionalProperties: true } },
-      summary: { type: "string", description: "本片段的摘要。" },
+      characters: cappedList("角色"),
+      locations: cappedList("地点"),
+      factions: cappedList("势力"),
+      events: cappedList("关键事件"),
+      facts: cappedList("事实"),
+      summary: { type: "string", description: "本片段主线摘要，三百字以内。" },
     },
     additionalProperties: true,
   });

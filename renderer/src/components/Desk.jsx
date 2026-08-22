@@ -17,6 +17,7 @@ export default function Desk({
   onOpenBook,
   onRestartBook,
   onRebakeBook,
+  onTopupCoarse,
   onChronicle,
   onRemoveBook,
   onExportBook,
@@ -99,7 +100,7 @@ export default function Desk({
                 >
                   <span className="fx-name">《{b.title}》</span>
                 </button>
-                {b.degraded || b.sourceless ? (
+                {b.degraded || b.sourceless || b.coarse?.sampled ? (
                   <div className="fx-flags">
                     {b.degraded ? (
                       <span
@@ -115,6 +116,14 @@ export default function Desk({
                         title="导入的世界文件未带原文：文风与「原著此刻」自动降级，不支持重起稿"
                       >
                         无原文
+                      </span>
+                    ) : null}
+                    {b.coarse?.sampled ? (
+                      <span
+                        className="fx-flag"
+                        title={`起稿时按预算采样粗读（读了 ${b.coarse.groupsRead}/${b.coarse.groupsTotal} 批）：世界档案照常，原著事实检索较薄。可「补读」增量补全`}
+                      >
+                        采样粗读
                       </span>
                     ) : null}
                   </div>
@@ -136,6 +145,17 @@ export default function Desk({
                     >
                       重开
                     </button>
+                    {b.coarse?.sampled ? (
+                      <button
+                        type="button"
+                        className="fx-act"
+                        title="补全采样漏掉的粗读批次：只烧缺的部分（已读批次不重复计费），随后用更全的摘要重建世界档案；对局、进度与存稿保留"
+                        disabled={Boolean(opening)}
+                        onClick={() => onTopupCoarse(b)}
+                      >
+                        补读
+                      </button>
+                    ) : null}
                     {b.sourceless ? null : (
                       <button
                         type="button"

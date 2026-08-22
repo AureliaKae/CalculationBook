@@ -242,7 +242,16 @@ export const mockBridge = {
       emit("progress", { jobId, bookTitle: BOOK.title, queueIndex: 1, queueTotal: 1, stage: "coarse", current: 2, total: 8 });
       await wait(800);
       emit("progress", { jobId, bookTitle: BOOK.title, queueIndex: 1, queueTotal: 1, stage: "complete", current: 8, total: 8 });
-      emit("done", { jobId, bookId, bookTitle: BOOK.title, degraded: null });
+      emit("done", { jobId, bookId, bookTitle: BOOK.title, degraded: null, coarse: null });
+      return { jobId, bookTitle: BOOK.title, queued: false, queueIndex: 1, queueTotal: 1 };
+    },
+    async topupCoarse(bookId) {
+      // 演示版补读：与重烧同一套假进度。
+      const jobId = "demo-topup-" + Date.now();
+      emit("progress", { jobId, bookTitle: BOOK.title, queueIndex: 1, queueTotal: 1, stage: "coarse", current: 2, total: 8 });
+      await wait(800);
+      emit("progress", { jobId, bookTitle: BOOK.title, queueIndex: 1, queueTotal: 1, stage: "complete", current: 8, total: 8 });
+      emit("done", { jobId, bookId, bookTitle: BOOK.title, degraded: null, coarse: null });
       return { jobId, bookTitle: BOOK.title, queued: false, queueIndex: 1, queueTotal: 1 };
     },
     async exportWorld() {

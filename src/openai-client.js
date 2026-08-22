@@ -508,8 +508,15 @@ export class OpenAiCompatibleClient {
   }
 
   // 该模型学到的输出上限（端点报错自愈时记下，估高的官方档位会被修正）。
+  // 用户在文房填了输出上限时压过厂商表默认——修复这类「整篇复述」步骤的
+  // 截断重试必须沿用用户的更大值，否则又被表里的 8192 打回原形。
+  // 学到的端点硬上限仍然最高优先（再高只会吃 400）。
   #effectiveMaxTokens(model) {
-    return this.learnedMaxTokens.get(model) ?? maxOutputTokensFor(model);
+    const learned = this.learnedMaxTokens.get(model);
+    if (learned != null) return learned;
+    const user = Number(this.config.maxTokens);
+    if (Number.isFinite(user) && user >= 1) return Math.floor(user);
+    return maxOutputTokensFor(model);
   }
 
   // 从 400 报错里解析端点声明的 max_tokens 上限（中英文口径都认）。

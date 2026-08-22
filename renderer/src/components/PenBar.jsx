@@ -3,17 +3,13 @@ import { useGSAP } from "@gsap/react";
 import gsap from "gsap";
 
 import Hint from "./Hint.jsx";
-import FadeIn from "./FadeIn.jsx";
 import { REDUCED } from "../lib/motion.js";
 
 /* 落笔：稿末一条横线，写此刻想做什么（≤40 字）。
-   意图历史（拍板 2026-08-19）：聚焦且未落字时浮层列最近几笔，点击填入——
-   长局里常有反复起意的旧笔，不必逐字重写；开始打字即隐（不遮上方解法）。
-   会话级，App 累积。 */
-export default function PenBar({ prompt, history = [], onSubmit }) {
+   意图历史浮层已随拍板移除（2026-08-22）：不展示已落过的旧笔。 */
+export default function PenBar({ prompt, onSubmit }) {
   const [text, setText] = useState("");
   const [len, setLen] = useState(0);
-  const [showHistory, setShowHistory] = useState(false);
   const inputRef = useRef(null);
   const formRef = useRef(null);
 
@@ -44,7 +40,6 @@ export default function PenBar({ prompt, history = [], onSubmit }) {
     // 落笔已上稿面（回声行），输入条清空：下一次起意从新字开始
     setText("");
     setLen(0);
-    setShowHistory(false);
   }
 
   function submit(e) {
@@ -57,14 +52,6 @@ export default function PenBar({ prompt, history = [], onSubmit }) {
       e.preventDefault();
       commit();
     }
-    if (e.key === "Escape") setShowHistory(false);
-  }
-
-  function pick(item) {
-    setText(item);
-    setLen([...item].length);
-    setShowHistory(false);
-    inputRef.current?.focus();
   }
 
   return (
@@ -81,8 +68,6 @@ export default function PenBar({ prompt, history = [], onSubmit }) {
           value={text}
           onChange={change}
           onKeyDown={onKeyDown}
-          onFocus={() => setShowHistory(true)}
-          onBlur={() => setShowHistory(false)}
           placeholder="此刻想做什么……"
           aria-label="落笔：写下此刻意图"
           autoComplete="off"
@@ -92,17 +77,6 @@ export default function PenBar({ prompt, history = [], onSubmit }) {
           落笔
         </button>
       </div>
-      {showHistory && !text.trim() && history.length ? (
-        <FadeIn as="ul" className="pen-history" aria-label="最近落笔">
-          {history.slice(0, 6).map((item, index) => (
-            <li key={`${index}-${item}`}>
-              <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => pick(item)}>
-                {item}
-              </button>
-            </li>
-          ))}
-        </FadeIn>
-      ) : null}
     </form>
   );
 }

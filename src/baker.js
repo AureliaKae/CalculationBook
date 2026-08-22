@@ -127,6 +127,50 @@ export function batches(chapters, maxCharacters = 50_000) {
   return output;
 }
 
+// 采样粗读：按预算选批——首尾与切入窗口必读，剩余名额在全书等距铺开。
+// 大部头的全本粗读占起稿 token 九成，而世界五片只消费裁剪后的摘要
+//（digestCoarse 至多 20 条里程碑），采样主要变薄的是游玩期正典账本。
+// 预算缺失/非正数/装得下全书 → 全读；返回要读的批次 index 集合。
+export function selectCoarseGroups(groups, { budgetChars, focusChapter = 1 } = {}) {
+  const all = groups.map((_, index) => index);
+  const budget = Number(budgetChars);
+  if (!Number.isFinite(budget) || budget <= 0) return new Set(all);
+  const charsOf = (index) => groups[index].reduce((sum, chapter) => sum + chapter.text.length, 0);
+  if (all.reduce((sum, index) => sum + charsOf(index), 0) <= budget) return new Set(all);
+  const lastChapter = groups.at(-1)?.at(-1)?.index ?? 1;
+  const focus = Math.min(Math.max(1, Number(focusChapter) || 1), lastChapter);
+  const picked = new Set([0, groups.length - 1]);
+  // 切入窗口：焦点章所在批及其前后各一批必读（精读与摘要的聚焦窗口都落在这里）。
+  const focusBatch = groups.findIndex(
+    (group) => focus >= (group[0]?.index ?? 0) && focus <= (group.at(-1)?.index ?? 0),
+  );
+  for (const offset of [-1, 0, 1]) {
+    const index = focusBatch + offset;
+    if (index >= 0 && index < groups.length) picked.add(index);
+  }
+  let used = [...picked].reduce((sum, index) => sum + charsOf(index), 0);
+  if (used >= budget) return picked; // 预算连必读批次都装不下：只保必读，不再铺开。
+  // 剩余预算能装多少批（按批序贪心估算），就在未选批次里按等距步长取多少。
+  const rest = all.filter((index) => !picked.has(index));
+  let capacity = 0;
+  for (const index of rest) {
+    if (used + charsOf(index) > budget) break;
+    used += charsOf(index);
+    capacity += 1;
+  }
+  if (capacity > 0) {
+    const stride = rest.length / capacity;
+    let spent = [...picked].reduce((sum, index) => sum + charsOf(index), 0);
+    for (let i = 0; i < capacity; i += 1) {
+      const index = rest[Math.min(rest.length - 1, Math.floor(i * stride))];
+      if (picked.has(index) || spent + charsOf(index) > budget) continue;
+      picked.add(index);
+      spent += charsOf(index);
+    }
+  }
+  return picked;
+}
+
 function baseState(world, focusChapter = 1) {
   const location = world.locations[0];
   return {
@@ -410,7 +454,18 @@ export class NovelBaker {
     this.webSearch = webSearch;
   }
 
-  async bake(novel, { focusChapter = 1, openAll = false, anchorTime, onProgress = () => {}, signal } = {}) {
+  async bake(
+    novel,
+    {
+      focusChapter = 1,
+      openAll = false,
+      anchorTime,
+      // 采样粗读的预算（字符数）：空/非正数 = 全本通读。见 selectCoarseGroups。
+      coarseBudgetChars,
+      onProgress = () => {},
+      signal,
+    } = {},
+  ) {
     // 切入章节超出书长时收拢到边界，避免精读请求拿着空数组去问模型。
     const chapterCount = novel.chapters.length || 1;
     focusChapter = Math.min(Math.max(1, Number(focusChapter) || 1), chapterCount);
@@ -443,10 +498,6 @@ export class NovelBaker {
     const sharedKey = `${novelHash}-${batchHash}-${WORLD_VERSION}`;
     const novelPath = join(this.cacheDirectory, `${sharedKey}.json`);
     const summariesPath = novelPath.replace(/\.json$/, ".summaries.jsonl");
-    const focusPath = join(
-      this.cacheDirectory,
-      `${novelHash}-${modelHash}-${batchHash}-${WORLD_VERSION}-${focusChapter}.json`,
-    );
     await adoptLegacyNovelCache(this.cacheDirectory, {
       novelHash,
       batchHash,
@@ -502,6 +553,31 @@ export class NovelBaker {
       }
     }
     checkpoint.summaries = await loadSummaries(summariesPath);
+    // 粗读范围：按预算选批（采样）或全读。选择集合只由预算决定、可跨次重演；
+    // 摘要日志里已有的批次不重读——换更大预算或全本补读时只烧缺口。
+    const groups = batches(novel.chapters, this.batchCharacters);
+    const coarseSelection = selectCoarseGroups(groups, {
+      budgetChars: coarseBudgetChars,
+      focusChapter,
+    });
+    // 覆盖度段进 focus 缓存键：全本沿用旧文件名（既有缓存不作废）；采样按
+    // 「本次应读 ∪ 日志已读」取哈希——预算变化/补烧自然换键，五片用新摘要
+    // 重建，不会命中旧 complete 缓存把采样时期的薄世界原样返回。
+    const covered = new Set(coarseSelection);
+    for (const [index] of groups.entries()) {
+      if (checkpoint.summaries[index] != null) covered.add(index);
+    }
+    const coverageKey =
+      covered.size >= groups.length
+        ? ""
+        : createHash("sha256")
+            .update(JSON.stringify([...covered].sort((a, b) => a - b)))
+            .digest("hex")
+            .slice(0, 12);
+    const focusPath = join(
+      this.cacheDirectory,
+      `${novelHash}-${modelHash}-${batchHash}-${WORLD_VERSION}-${focusChapter}${coverageKey ? `-${coverageKey}` : ""}.json`,
+    );
     try {
       focusCheckpoint = JSON.parse(await readFile(focusPath, "utf8"));
       // 先验版本再验完成:complete 的旧检查点若 stageVersion 陈旧,同样作废成品与
@@ -599,7 +675,6 @@ export class NovelBaker {
       await persistNovelMeta();
     }
     const genre = checkpoint.genre ?? "其他";
-    const groups = batches(novel.chapters, this.batchCharacters);
     if (!checkpoint.style) {
       checkpoint.style = await call(
         [
@@ -617,7 +692,13 @@ export class NovelBaker {
     }
 
     checkpoint.summaries ??= [];
-    let completed = checkpoint.summaries.filter((summary) => summary != null).length;
+    // 采样下的进度口径：只数「本次应读」的批次（日志里可能躺着历史多读的
+    // 批次，不该把进度顶过 total）。
+    let completed = groups.reduce(
+      (count, _, index) =>
+        count + (checkpoint.summaries[index] != null && coarseSelection.has(index) ? 1 : 0),
+      0,
+    );
     // 并发下完成顺序可能乱,进度取已完成批次覆盖到的最大章号(单调,不精确但诚实)。
     let maxChapter = Math.max(
       0,
@@ -628,12 +709,16 @@ export class NovelBaker {
     const coarseProgress = () => ({
       stage: "coarse",
       current: completed,
-      total: groups.length,
+      total: coarseSelection.size,
       chapter: maxChapter,
       totalChapters: novel.chapters.length,
     });
     if (completed) onProgress(coarseProgress());
-    const pending = groups.map((_, index) => index).filter((index) => checkpoint.summaries[index] == null);
+    const pending = groups
+      .map((_, index) => index)
+      .filter(
+        (index) => coarseSelection.has(index) && checkpoint.summaries[index] == null,
+      );
     let next = 0;
     let failure;
     let persist = Promise.resolve();
@@ -649,7 +734,8 @@ export class NovelBaker {
             [
               {
                 role: "system",
-                content: "提取小说片段中的角色、地点、势力、关键事件和事实。只返回 JSON。",
+                content:
+                  "提取小说片段中的角色、地点、势力、关键事件和事实。只返回 JSON。每类只挑最重要的条目（至多十余条、每条一句话），summary 概括本片段主线、三百字以内——多列不加分，下游还会再裁剪。",
               },
               {
                 role: "user",
@@ -979,6 +1065,22 @@ export class NovelBaker {
       ...(Number.isFinite(anchorTime) ? { anchorTime } : {}),
     };
     world.initialStateTemplate = initialState;
+    // 采样覆盖度随档案落盘：案头据此亮「采样粗读」徽章与「补读」入口；
+    // 补读烧满全部批次后本字段不再出现，徽章随之熄灭。
+    const groupsRead = groups.reduce(
+      (count, _, index) => count + (checkpoint.summaries[index] != null ? 1 : 0),
+      0,
+    );
+    if (groupsRead < groups.length) {
+      world.coarse = {
+        sampled: true,
+        groupsRead,
+        groupsTotal: groups.length,
+        ...(Number.isFinite(Number(coarseBudgetChars)) && Number(coarseBudgetChars) > 0
+          ? { budgetChars: Number(coarseBudgetChars) }
+          : {}),
+      };
+    }
     validateWorld(world);
     validateInitialState(initialState, world);
     const result = {

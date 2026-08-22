@@ -174,7 +174,9 @@ async function persistFailedJob() {
           focusChapter: failedJob.focusChapter,
           openAll: Boolean(failedJob.openAll),
           anchorTime: Number.isFinite(failedJob.anchorTime) ? failedJob.anchorTime : null,
+          ...(failedJob.coarseBudgetChars ? { coarseBudgetChars: failedJob.coarseBudgetChars } : {}),
           filePath: failedJob.filePath ?? null,
+          error: failedJob.error ?? null,
         }),
         "utf8",
       );
@@ -1058,6 +1060,38 @@ ipcMain.handle("library:rebake", async (event, { bookId }) => {
   drainBakeQueue();
   return { jobId: job.id, bookTitle: job.title, queued, ...bakeSnapshot() };
 });
+
+// 补读:采样烧成的书以全本预算重跑——摘要日志里已有的批次不重读,只烧缺口,
+// 五片因覆盖度键变化用更全的摘要重建。不清缓存、不下架,对局/进度/存稿原样保留。
+ipcMain.handle("library:coarse-topup", async (event, { bookId } = {}) => {
+  if (!trustedSender(event)) throw new Error("拒绝来自未知来源的调用");
+  if (typeof bookId !== "string" || !bookId) throw new Error("请先选择一本书");
+  const book = await library.load(bookId);
+  if (!Array.isArray(book.chapters) || !book.chapters.length) {
+    throw new Error("这本书没有留存原文，无法补读");
+  }
+  if (!book.meta?.coarse?.sampled) throw new Error("这本书不是采样粗读，无需补读");
+  const novel = {
+    title: book.meta.title,
+    format: book.meta.format,
+    chapters: book.chapters.map(({ index, title, text }) => ({ index, title, text })),
+  };
+  const scope = book.world?.creationScope ?? {};
+  const job = {
+    id: randomUUID(),
+    novel,
+    title: novel.title,
+    focusChapter: Number.isInteger(scope.focusChapter) ? scope.focusChapter : 1,
+    openAll: Boolean(scope.openAll),
+    // 沿用上次的切入与时间锚点,补读后的世界与旧档开局一致。
+    anchorTime: Number.isFinite(scope.anchorTime) ? scope.anchorTime : undefined,
+    controller: new AbortController(),
+  };
+  bakeQueue.push(job);
+  const queued = runningJobs.size >= MAX_CONCURRENT_BAKES;
+  drainBakeQueue();
+  return { jobId: job.id, bookTitle: job.title, queued, ...bakeSnapshot() };
+});
 // —— 世界分享（拍板 2026-08-21：.cpworld 世界文件）——
 // 导出：把烧制产物打包成可分享/备份的 ZIP 容器。轻装档（默认）不带原文；
 // 全档带原文与粗读摘要，自用备份/跨机迁移。导出读的是书库当前状态：游玩期
@@ -1681,13 +1715,16 @@ async function unfinishedBakeFor(novel) {
     if (!name.startsWith(`${prefix}-`) || !name.endsWith(".json")) continue;
     // 只有 focus 文件(五段:novelHash-模型哈希-批次哈希-w3-切入章)承载烧制进度,
     // complete 标记也在那里;书级元数据文件(三/四段)没有「烧到一半」的概念,
-    // 不按段数过滤会被误当成断点档。
-    if (name.slice(0, -".json".length).split("-").length !== 5) continue;
+    // 不按段数过滤会被误当成断点档。采样烧制的 focus 文件多一段覆盖度哈希
+    // (六段),切入章取倒数第二段。
+    const segments = name.slice(0, -".json".length).split("-");
+    if (segments.length !== 5 && segments.length !== 6) continue;
     try {
       const checkpoint = JSON.parse(await readFile(join(directory, name), "utf8"));
       if (checkpoint.complete === true) continue;
-      const segments = name.slice(0, -".json".length).split("-");
-      const focusChapter = Number(segments.at(-1));
+      const focusChapter = Number(
+        segments[segments.length - (segments.length === 5 ? 1 : 2)],
+      );
       return {
         focusChapter: Number.isInteger(focusChapter) && focusChapter > 0 ? focusChapter : null,
         modelName: checkpoint.modelName ?? "",
@@ -1742,6 +1779,8 @@ async function runBakeJob(job) {
     focusChapter: job.focusChapter,
     openAll: Boolean(job.openAll),
     anchorTime: job.anchorTime,
+    // 采样粗读预算:缺省=全本。补读(library:coarse-topup)不传预算,即烧满全书。
+    coarseBudgetChars: job.coarseBudgetChars,
     onProgress: (progress) => {
       if (progress.stage !== "coarse") {
         coarseSamples.length = 0;
@@ -1786,6 +1825,8 @@ async function runBakeJobLifecycle(job) {
         bookId: meta.id,
         bookTitle: job.title,
         degraded: meta.degraded ?? null,
+        // 采样粗读的覆盖度:HUD/案头可提示「这卷是采样烧的,可补读」。
+        coarse: meta.coarse ?? null,
       });
     }
   } catch (error) {
@@ -1801,9 +1842,16 @@ async function runBakeJobLifecycle(job) {
         focusChapter: job.focusChapter,
         openAll: Boolean(job.openAll),
         anchorTime: job.anchorTime,
+        ...(job.coarseBudgetChars ? { coarseBudgetChars: job.coarseBudgetChars } : {}),
         filePath: job.novel?.filePath ?? null,
         // 没有路径可依赖时才保留已解析的小说（正常导入路径都有 filePath）。
         novel: job.novel?.filePath ? undefined : job.novel,
+        // 失败原因随任务落盘:重启后的重试入口也能说清上次为什么没烧成。
+        error: {
+          name: error.name ?? "",
+          status: Number.isFinite(error.status) ? error.status : null,
+          message: String(error.message ?? ""),
+        },
       };
       await persistFailedJob();
     }
@@ -1826,28 +1874,36 @@ async function runBakeJobLifecycle(job) {
   }
 }
 
-ipcMain.handle("novel:bake", async (event, { focusChapter = 1, openAll = false } = {}) => {
-  if (!trustedSender(event)) throw new Error("拒绝来自未知来源的调用");
-  if (!pendingNovel) throw new Error("请先选择小说文件");
-  const job = {
-    id: randomUUID(),
-    novel: pendingNovel,
-    title: pendingNovel.title,
-    focusChapter,
-    openAll: Boolean(openAll),
-    controller: new AbortController(),
-  };
-  pendingNovel = undefined;
-  bakeQueue.push(job);
-  const queued = runningJobs.size >= MAX_CONCURRENT_BAKES;
-  drainBakeQueue();
-  return { jobId: job.id, bookTitle: job.title, queued, ...bakeSnapshot() };
-});
+ipcMain.handle(
+  "novel:bake",
+  async (event, { focusChapter = 1, openAll = false, coarseBudgetChars } = {}) => {
+    if (!trustedSender(event)) throw new Error("拒绝来自未知来源的调用");
+    if (!pendingNovel) throw new Error("请先选择小说文件");
+    // 采样粗读预算(字符数):只收正数,其余一律按全本处理。
+    const budget = Number(coarseBudgetChars);
+    const job = {
+      id: randomUUID(),
+      novel: pendingNovel,
+      title: pendingNovel.title,
+      focusChapter,
+      openAll: Boolean(openAll),
+      ...(Number.isFinite(budget) && budget > 0 ? { coarseBudgetChars: Math.floor(budget) } : {}),
+      controller: new AbortController(),
+    };
+    pendingNovel = undefined;
+    bakeQueue.push(job);
+    const queued = runningJobs.size >= MAX_CONCURRENT_BAKES;
+    drainBakeQueue();
+    return { jobId: job.id, bookTitle: job.title, queued, ...bakeSnapshot() };
+  },
+);
 
 ipcMain.handle("novel:bake-retry", async (event, { jobId } = {}) => {
   if (!trustedSender(event)) throw new Error("拒绝来自未知来源的调用");
   if (failedJob?.id !== jobId) throw new Error("这次起稿已经无法重试，请重新导入");
   const job = { ...failedJob, id: randomUUID(), controller: new AbortController() };
+  // 上次的失败原因只用于展示,不是重跑参数。
+  delete job.error;
   failedJob = undefined;
   await clearPersistedFailedJob();
   if (!job.novel) {

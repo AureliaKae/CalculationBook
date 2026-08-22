@@ -285,8 +285,10 @@ export const CREATION_STEPS = [
 
 /* ============ 排版密度 ============ */
 
+/* 拍板 2026-08-22：正文栏宽与落笔坞（输入框）同宽——各密度档 col 统一
+   100%，密度只调字号，不再收窄栏宽。 */
 export const DENSITY = [
-  { key: "compact", label: "紧凑", col: "38em", size: "1rem" },
-  { key: "standard", label: "标准", col: "42em", size: "1.0625rem" },
-  { key: "wide", label: "宽疏", col: "46em", size: "1.125rem" },
+  { key: "compact", label: "紧凑", col: "100%", size: "1rem" },
+  { key: "standard", label: "标准", col: "100%", size: "1.0625rem" },
+  { key: "wide", label: "宽疏", col: "100%", size: "1.125rem" },
 ];

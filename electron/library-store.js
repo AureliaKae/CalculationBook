@@ -82,6 +82,17 @@ export class LibraryStore {
       degraded: world?.degraded
         ? { reasons: world.degraded.reasons ?? [], note: world.degraded.note ?? "" }
         : null,
+      // 采样粗读的覆盖度:书架据此亮「采样粗读」徽章,并给「补读」入口;
+      // 补读烧满后重新 add,本字段不再出现。
+      ...(world?.coarse?.sampled
+        ? {
+            coarse: {
+              sampled: true,
+              groupsRead: world.coarse.groupsRead ?? 0,
+              groupsTotal: world.coarse.groupsTotal ?? 0,
+            },
+          }
+        : {}),
       // 导入的无原文世界：chapters 为空数组占位（load 对它是硬依赖），重烧被
       // library:rebake 拒绝；书架据此刻徽标并隐藏「重新烧制」。
       ...(sourceless ? { sourceless: true } : {}),

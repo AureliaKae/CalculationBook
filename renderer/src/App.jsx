@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { api } from "./lib/bridge.js";
 import { mapTerms } from "./lib/terms.js";
 import { bakePercent } from "./lib/engine-display.js";
-import { classifyTurnError } from "../../src/client.js";
+import { classifyBakeError, classifyTurnError } from "../../src/client.js";
 import { DENSITY } from "./mock.js";
 import Reading from "./components/Reading.jsx";
 import Desk from "./components/Desk.jsx";
@@ -199,11 +199,21 @@ export default function App() {
         });
         return;
       }
+      // 失败原因要说人话:原始报错(英文/状态码)过一遍分类器,给出
+      // 「为什么 + 下一步」;重试按钮按分类给——配错 Key/余额尽这种
+      // 点重试只会再失败一遍,不给按钮,提示先去文房处理。
+      const classified = classifyBakeError({
+        name: e.name,
+        status: e.status,
+        message: e.message,
+      });
       upsert(e.jobId, {
         bookTitle: e.bookTitle,
         status: "error",
         message: e.message,
-        retryable: true,
+        reason: mapTerms(classified.title),
+        advice: mapTerms(classified.advice),
+        retryable: classified.retryable,
       });
     });
     const offPhase = api.story.onPhase((p) => setStoryPhase(p));
@@ -351,6 +361,28 @@ export default function App() {
     [note, refreshBooks],
   );
 
+  /* 补读：采样烧成的书以全本粗读补缺口并重建世界档案；进度与存稿保留。 */
+  const topupCoarseBook = useCallback(
+    (book) => {
+      setConfirmAsk({
+        title: `补全《${book.title}》的粗读？`,
+        detail: "只读采样漏掉的批次（已读的不重复计费），随后用更全的摘要重建世界档案。对局、进度与存稿都保留。",
+        confirmLabel: "补全粗读",
+        onConfirm: () => {
+          api.library
+            .topupCoarse(book.id)
+            .then(() => {
+              note(`《${book.title}》补读中…`);
+            })
+            .catch((error) => {
+              note(error.message);
+            });
+        },
+      });
+    },
+    [note],
+  );
+
   /* 编年史入口：案头书卡「编年」→ 全屏只读视图。 */
   const openChronicle = useCallback((book) => {
     setChronicle({ bookId: book.id, title: book.title });
@@ -496,22 +528,10 @@ export default function App() {
 
   /* ---------- 回合循环 ---------- */
 
-  // 意图历史（拍板 2026-08-19：落笔框快捷重发）：会话级累积，最近 12 笔，
-  // 与上一条相同不重复；enterView 清空回声但不清历史——旧笔跨视图可用，
-  // 重开应用即清。ref 而非 state：只在 PenBar 聚焦时消费，无需触发重渲染。
-  const intentHistoryRef = useRef([]);
-  const rememberIntent = (text) => {
-    const list = intentHistoryRef.current;
-    if (list[list.length - 1] === text) return;
-    list.push(text);
-    if (list.length > 12) list.splice(0, list.length - 12);
-  };
-
   const submitIntent = useCallback(
     async (text) => {
       const hand = view?.turns?.length ?? 0;
       setIntents((list) => [...list, { turn: hand, text }]);
-      rememberIntent(text);
       setChosenId(null);
       setPhase("deriving");
       const token = (intentTokenRef.current += 1);
@@ -780,6 +800,7 @@ export default function App() {
           onOpenBook={openBook}
           onRestartBook={restartBook}
           onRebakeBook={rebakeBook}
+          onTopupCoarse={topupCoarseBook}
           onChronicle={openChronicle}
           onRemoveBook={removeBook}
           onExportBook={exportBook}
@@ -817,7 +838,6 @@ export default function App() {
             intents={intents
               .filter((entry) => entry.turn === (view?.turns?.length ?? 0))
               .map((entry) => entry.text)}
-            intentHistory={intentHistoryRef.current}
             active={surface === "reading"}
             theme={theme}
             onTheme={setTheme}

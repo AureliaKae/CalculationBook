@@ -15,7 +15,7 @@ import { REDUCED } from "../lib/motion.js";
 const PANELS = [
   { id: "ink", label: "墨水坊", note: "API 密钥" },
   { id: "brush", label: "草稿笔 · 定稿笔", note: "模型分配" },
-  { id: "bake", label: "起稿台", note: "并发与思考" },
+  { id: "bake", label: "起稿台", note: "并发与输出上限" },
   { id: "usage", label: "账目", note: "用量" },
 ];
 
@@ -45,6 +45,7 @@ export default function Studio({ locked = false, settings, onSettingsSaved, onBa
     strong: settings?.strong ?? { credentialId: "", model: "" },
     thinkingStrong: settings?.thinkingStrong ?? true,
     bakeConcurrency: settings?.bakeConcurrency ?? "",
+    maxTokens: settings?.maxTokens ?? "",
   }));
   const [keyEdits, setKeyEdits] = useState({});
   const [testing, setTesting] = useState(null);
@@ -418,6 +419,21 @@ export default function Studio({ locked = false, settings, onSettingsSaved, onBa
                   value={draft.bakeConcurrency ?? ""}
                   placeholder="自动"
                   onChange={(e) => patch({ bakeConcurrency: e.target.value.replace(/[^\d]/g, "").slice(0, 2) })}
+                />
+              </div>
+              <div className="bake-row">
+                <span className="brush-l">
+                  输出上限
+                  <Hint text="单次请求允许模型输出的最大 token 数（max_tokens），对起稿与游玩全部生效。留空=不设限、按端点默认。大部头起稿若在「修复世界档案」一步反复失败，多半是修复要整篇复述世界、输出被截断——这里填大些（如 32768）再重试。端点不接受的数值会报 400，按报错收窄即可。" />
+                </span>
+                <span className="studio-note">留空=按端点默认；修复截断可填 32768</span>
+                <input
+                  className="mono brush-select bake-conc"
+                  type="text"
+                  inputMode="numeric"
+                  value={draft.maxTokens ?? ""}
+                  placeholder="自动"
+                  onChange={(e) => patch({ maxTokens: e.target.value.replace(/[^\d]/g, "").slice(0, 6) })}
                 />
               </div>
               <p className="studio-note">存稿后生效。</p>

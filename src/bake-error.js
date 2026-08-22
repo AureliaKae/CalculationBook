@@ -38,6 +38,16 @@ export function classifyBakeError({ name = "", status, message = "" } = {}) {
     };
   }
 
+  // 404 多半是模型名写错或已下线（openai 兼容接口的通用行为），重试无意义。
+  if (status === 404) {
+    return {
+      kind: "model",
+      title: "笔杆型号不存在",
+      advice: "文房里这个模型名写错了或已下线，改一个再试。",
+      retryable: false,
+    };
+  }
+
   if (status === 429) {
     return {
       kind: "quota",
@@ -82,6 +92,16 @@ export function classifyBakeError({ name = "", status, message = "" } = {}) {
       kind: "repair",
       title: "世界档案没能补齐",
       advice: "多半是模型这次答得太随意，重试一次通常就好；老是失败就换个更强的模型。",
+      retryable: true,
+    };
+  }
+
+  // 模型反复交不出合法 JSON（空回复/截断/格式烂）：多半是模型太弱。
+  if (name === "ModelContentError") {
+    return {
+      kind: "content",
+      title: "模型没交出合法结果",
+      advice: "多半是模型太弱或输出被截断：换个更强的模型重试一次通常就好，已烧好的批次不会白费。",
       retryable: true,
     };
   }

@@ -86,8 +86,18 @@ export default function BakeHud({ jobs, onCancel, onEnter, onRetry, onDismiss })
             </>
           ) : (
             <>
-              <span className="bake-title err" title={job.message ? mapTerms(job.message) : "未知错误"}>
-                《{job.bookTitle}》未成
+              <span
+                className="bake-title err"
+                title={
+                  [
+                    job.advice,
+                    job.message ? `原始报错：${mapTerms(job.message)}` : null,
+                  ]
+                    .filter(Boolean)
+                    .join("\n") || "未知错误"
+                }
+              >
+                《{job.bookTitle}》未成{job.reason ? ` · ${job.reason}` : ""}
               </span>
               {job.retryable ? (
                 <button type="button" className="bake-done-link" onClick={() => onRetry(jobId)}>

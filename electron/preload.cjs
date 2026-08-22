@@ -22,6 +22,7 @@ contextBridge.exposeInMainWorld("calculationpaper", {
     list: () => ipcRenderer.invoke("library:list"),
     remove: (id) => ipcRenderer.invoke("library:remove", id),
     rebake: (bookId) => ipcRenderer.invoke("library:rebake", { bookId }),
+    topupCoarse: (bookId) => ipcRenderer.invoke("library:coarse-topup", { bookId }),
     chronicle: (bookId) => ipcRenderer.invoke("library:chronicle", bookId),
     exportWorld: (bookId, withSource) =>
       ipcRenderer.invoke("library:export-world", { bookId, withSource }),

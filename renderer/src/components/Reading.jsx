@@ -29,7 +29,6 @@ export default function Reading({
   inkTotal = 0,
   chosenId,
   intents, // 本手内的落笔痕迹（按序，改主意追加不替换）
-  intentHistory = [], // 会话级意图历史（最近落笔，PenBar 快捷重发）
   active = true,
   theme,
   onTheme,
@@ -273,7 +272,6 @@ export default function Reading({
                             ? "第一手想做什么？"
                             : "此刻想做什么？"
                       }
-                      history={intentHistory}
                       onSubmit={onIntent}
                     />
                     )}

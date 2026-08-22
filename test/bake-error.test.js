@@ -59,6 +59,20 @@ test("402 余额用尽不可重试,提示充值或换凭证", () => {
   assert.match(result.advice, /充值/);
 });
 
+test("404 是模型名写错或下线,指向文房且不给重试", () => {
+  const result = classifyBakeError({ status: 404, message: "Model API 404: model not found" });
+  assert.equal(result.kind, "model");
+  assert.equal(result.retryable, false);
+  assert.match(result.advice, /文房/);
+});
+
+test("模型交不出合法 JSON 归为内容失败,换模型可重试", () => {
+  const result = classifyBakeError({ name: "ModelContentError", message: "Invalid model JSON" });
+  assert.equal(result.kind, "content");
+  assert.equal(result.retryable, true);
+  assert.match(result.advice, /换.*模型/);
+});
+
 test("回合错误分类:模型错误给友好文案,业务错误返回 null", () => {
   const balance = classifyTurnError({ status: 402, message: "Model API 402: Insufficient Balance" });
   assert.equal(balance.title, "这条凭证的余额用完了");
