@@ -336,7 +336,7 @@ export default function Studio({ locked = false, settings, onSettingsSaved, onBa
             <>
               {[
                 { key: "fast", badge: "草", label: "草稿笔 · 快", hint: "快笔：起稿与摘要。价廉，量大。" },
-                { key: "strong", badge: "定", label: "定稿笔 · 强", hint: "强笔：叙事回合。起稿（思考链）开，则慢而深思。" },
+                { key: "strong", badge: "定", label: "定稿笔 · 强", hint: "强笔：叙事回合。价高，字精。" },
               ].map((slot) => {
                 const current = draft[slot.key] ?? {};
                 const credential = draft.credentials.find((c) => c.id === current.credentialId);
@@ -347,7 +347,7 @@ export default function Studio({ locked = false, settings, onSettingsSaved, onBa
                       <span className="mini-badge">{slot.badge}</span>
                       <span>
                         {slot.label}
-                        <Hint text="墨行＝用哪一条 API 密钥；笔杆＝用哪个模型。草稿笔管起稿与摘要，定稿笔管回合叙事。" />
+                        <Hint text="墨行＝用哪一条 API 密钥；笔杆＝用哪个模型。" />
                       </span>
                     </div>
                     <label className="brush-row">
@@ -382,7 +382,7 @@ export default function Studio({ locked = false, settings, onSettingsSaved, onBa
                     {slot.key === "strong" && (
                       <div className="brush-row">
                         <span className="brush-l">
-                          起稿（思考链）
+                          腹稿（思考链）
                           <Hint text="定稿笔在下笔前先打腹稿：开则慢而深思，叙事更稳；关则快而便宜。" />
                         </span>
                         <button
@@ -420,7 +420,7 @@ export default function Studio({ locked = false, settings, onSettingsSaved, onBa
                   onChange={(e) => patch({ bakeConcurrency: e.target.value.replace(/[^\d]/g, "").slice(0, 2) })}
                 />
               </div>
-              <p className="studio-note">数目账：起稿的笔路宽窄。存稿后生效。</p>
+              <p className="studio-note">存稿后生效。</p>
             </>
           )}
 

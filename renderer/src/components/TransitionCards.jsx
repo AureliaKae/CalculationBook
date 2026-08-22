@@ -101,7 +101,7 @@ export function ReselectCard({ world, onReselect }) {
     <section className="role-card" aria-label="重选身份" ref={ref}>
       <p className="role-mark">
         改 题
-        <Hint text="当前身份已不在本书目录里（换机器或旧档偶发）：重选一个来路，心性与所求原样保留。" />
+        <Hint text="换机器或沿用旧档时偶发：书里的身份目录对不上档里的当前身份。" />
       </p>
       <h3 className="role-title">当前身份已不在本书目录</h3>
       <p className="role-desc">从本书的身份目录里重选一个来路——心性与所求原样保留。</p>

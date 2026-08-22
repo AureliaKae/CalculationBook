@@ -256,7 +256,7 @@ export default function Creation({ world, successor = false, prefill, storyPhase
                 {successor && inheritedBigFive
                   ? "习性难改——上一世养成的性子随你转世，写不清意图时它仍会替你拿主意，此后每一步继续重塑它。"
                   : "不选性子。你的性子，将由你在世间的每一次落笔养出来——写不清意图的时候，已成形的性子会替你拿主意。"}
-                <Hint text="心性五维：开放性、尽责性、外向性、宜人性、情绪稳定性。故事中的选择持续挪动它们，转世时全额带走。" />
+                <Hint text="心性五维：开放性、尽责性、外向性、宜人性、情绪稳定性。转世时全额带走。" />
               </p>
               {successor && inheritedBigFive ? (
                 <div className="bf-options">

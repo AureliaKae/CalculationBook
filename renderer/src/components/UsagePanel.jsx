@@ -68,7 +68,7 @@ export default function UsagePanel() {
     <section className="brush-card">
       <div className="brush-head">
         用量账 · 全部书目
-        <Hint text="入＝喂给模型的字，出＝模型写回的字，出通常比入贵。token 是计费单位，约 1 token ≈ 0.6 个汉字。" />
+        <Hint text="入＝喂给模型的字，出＝模型写回的字，出通常比入贵。token 是计费单位，约 1 token ≈ 0.6 个汉字；费用按各家牌价自行换算。" />
       </div>
       <dl className="imp-facts" ref={listRef}>
         {data.books.map((book) => (
@@ -88,7 +88,6 @@ export default function UsagePanel() {
           </dd>
         </div>
       </dl>
-      <p className="studio-note">输入≈喂给模型的字，输出≈模型写下的字；按各家牌价自行换算费用。</p>
     </section>
   );
 }
