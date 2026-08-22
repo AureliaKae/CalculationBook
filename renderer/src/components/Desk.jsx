@@ -139,7 +139,7 @@ export default function Desk({
                     <button
                       type="button"
                       className="fx-act"
-                      title="重新开始一世（当前进度与存稿作废）"
+                      title="重新开始一世（当前进度与存档作废）"
                       disabled={Boolean(opening)}
                       onClick={() => onRestartBook(b)}
                     >
@@ -149,7 +149,7 @@ export default function Desk({
                       <button
                         type="button"
                         className="fx-act"
-                        title="补全采样漏掉的粗读批次：只烧缺的部分（已读批次不重复计费），随后用更全的摘要重建世界档案；对局、进度与存稿保留"
+                        title="补全采样漏掉的粗读批次：只烧缺的部分（已读批次不重复计费），随后用更全的摘要重建世界档案；对局、进度与存档保留"
                         disabled={Boolean(opening)}
                         onClick={() => onTopupCoarse(b)}
                       >
@@ -188,7 +188,7 @@ export default function Desk({
                     <button
                       type="button"
                       className="fx-act danger"
-                      title="从案头移除这本书：对局、进度与存稿一并清除，起稿缓存保留"
+                      title="从案头移除这本书：对局、进度与存档一并清除，起稿缓存保留"
                       disabled={Boolean(opening)}
                       onClick={() => onRemoveBook(b)}
                     >
@@ -202,7 +202,7 @@ export default function Desk({
           <button type="button" className="fx-new" onClick={() => setImportOpen(true)}>
             <span className="fx-plus">＋</span>
             <span className="fx-name">起稿一部小说</span>
-            <span className="fx-sub">择一部 .txt / .epub，起稿成卷</span>
+            <span className="fx-sub">选一部 .txt / .epub，起稿后开玩</span>
           </button>
         </div>
       </main>
@@ -214,7 +214,7 @@ export default function Desk({
             导入世界
           </button>
           <button type="button" className="navbit" onClick={onStudio}>
-            文房
+            设置
           </button>
         </div>
       </footer>

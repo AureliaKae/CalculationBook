@@ -125,11 +125,11 @@ export default function Reading({
   // 关键回合（强模型全笔）在状态行说明：读屏与速览都能知道这一手为何更慢。
   const isKeyTurn = deepPhases.includes("key-turn");
   const phaseLabel = {
-    read: view?.nextKeyTurn ? "关键回合在即——落笔需慎" : "",
-    deriving: "演算中",
-    options: view?.nextKeyTurn ? "关键回合——演算既毕，有解如左，落子需慎" : "演算既毕，有解如左",
+    read: view?.nextKeyTurn ? "关键回合在即——行动需慎" : "",
+    deriving: "推演中",
+    options: view?.nextKeyTurn ? "关键回合——推演完成，选项如下，慎重选择" : "推演完成 · 选一个：",
     resolving: isKeyTurn ? "关键回合推演中——用强笔细写，需多等片刻" : "回合推演中",
-    resolved: ending ? "此稿结案" : "后果已落定",
+    resolved: ending ? "本稿结案" : "结果已定",
   }[phase];
   const notes = lastTurn ? notesFromTurn(lastTurn, view) : [];
 
@@ -156,7 +156,7 @@ export default function Reading({
             <div className="sheet-main">
                 <header className="scene-head">
                   <h1 className="scene-title">{view?.title}</h1>
-                  <span className="scene-no">手 {pad(turnCount)}</span>
+                  <span className="scene-no">回合 {pad(turnCount)}</span>
                 </header>
                 <hr className="scene-rule" />
 
@@ -169,7 +169,7 @@ export default function Reading({
 
                 {turns.map((turn, index) => (
                   <section className="hand" key={turn.number}>
-                    <p className="hand-mark mono" aria-label={`第 ${turn.number} 手`}>
+                    <p className="hand-mark mono" aria-label={`第 ${turn.number} 回合`}>
                       {pad(turn.number)}
                     </p>
                     <Prose
@@ -199,7 +199,7 @@ export default function Reading({
                     kicker="收卷 · 此卷归档"
                     lines={epitaphLines(ending, pc?.name)}
                     onRestart={onRestart}
-                    restartLabel="另起一稿"
+                    restartLabel="重开一世"
                     onContinue={onContinueStage}
                     continueLabel="续写新阶段"
                     onDesk={onDesk}
@@ -228,7 +228,7 @@ export default function Reading({
                         {inkDraft ? (
                           <FadeIn as="section" className="ink-draft" aria-hidden="true">
                             <p className="ink-draft-label">
-                              正在落墨 · 未定稿<span title="界面只留末尾约千字防涨内存；整回正文以落定稿为准">（只显末段）</span>
+                              正在生成 · 未定稿<span title="界面只留末尾约千字防涨内存；整回正文以生成定稿为准">（只显末段）</span>
                             </p>
                             <p className="ink-draft-text">
                               {inkDraft}
@@ -252,7 +252,7 @@ export default function Reading({
                       <>
                         {(intents ?? []).map((text, i) => (
                           <FadeIn as="p" className="echo" key={i}>
-                            落笔 · 「{text}」
+                            行动 · 「{text}」
                           </FadeIn>
                         ))}
                         <Options
@@ -267,9 +267,9 @@ export default function Reading({
                     <PenBar
                       prompt={
                         phase === "options"
-                          ? "另写一笔，解法随之重来——不耗手数"
+                          ? "换个做法，重新给解——不耗回合"
                           : turnCount === 0
-                            ? "第一手想做什么？"
+                            ? "第 1 回合想做什么？"
                             : "此刻想做什么？"
                       }
                       onSubmit={onIntent}
@@ -377,7 +377,7 @@ export default function Reading({
                   <section className="margin-sec" aria-label="命数">
                     <p className="ms-mark">
                       命 数
-                      <Hint text="你正在撬动的原著命数。火候是意象不是数值：暗流初起——刚落下第一颗子；履薄蓄势——路子对了，火候未到；命运松动——可以出手了，成败仍看落笔与暗骰。天命反弹会把火候打回去。" />
+                      <Hint text="你正在撬动的原著命数。火候是意象不是数值：暗流初起——刚落下第一颗子；履薄蓄势——路子对了，火候未到；命运松动——可以出手了，成败仍看行动与判定。天命反弹会把火候打回去。" />
                     </p>
                     <ul className="fate-list">
                       {view.fate.map((item) => (

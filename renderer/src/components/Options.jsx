@@ -29,7 +29,7 @@ export default function Options({ options, chosenId, onChoose, disabled }) {
 
   return (
     <div className="options" ref={listRef}>
-      <p className="options-head">演算既毕 · 有解如左</p>
+      <p className="options-head">推演完成 · 选一个：</p>
       {options.map((o, i) => {
         const chosen = chosenId === o.id;
         const faded = chosenId != null && !chosen;
@@ -50,7 +50,7 @@ export default function Options({ options, chosenId, onChoose, disabled }) {
             </span>
             <span className="text">{o.text}</span>
             {o.stakes ? <span className="cand-note">{o.stakes}</span> : null}
-            <span className="hint">按 {i + 1} 选取</span>
+            <span className="hint">按 {i + 1} 选择</span>
           </button>
         );
       })}

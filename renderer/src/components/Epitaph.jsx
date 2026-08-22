@@ -62,7 +62,7 @@ export default function Epitaph({ seal = "结", kicker = "判词 · 此稿归档
           )}
           {onDesk && (
             <button type="button" className="ghost-btn" onClick={onDesk}>
-              搁笔回案头
+              回到案头
             </button>
           )}
         </div>

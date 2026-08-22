@@ -91,7 +91,7 @@ export default function ImportDialog({ open, onClose, onBakeStarted, onNote }) {
             </button>
             <div className="imp-acts">
               <button type="button" className="ghost-btn" onClick={onClose} disabled={busy}>
-                先回案头
+                先返回
               </button>
             </div>
           </>

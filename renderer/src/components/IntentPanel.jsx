@@ -37,17 +37,17 @@ export default function IntentPanel({ goal, scheme, onSetGoal, onSetScheme }) {
       <FadeIn
         as="section"
         className="intent-panel editing"
-        aria-label={isGoal ? "改写此世之志" : "改写当前谋算"}
+        aria-label={isGoal ? "改写这一世的目标" : "改写当前计划"}
       >
-        <p className="ip-label">{isGoal ? "此世之志" : "当前谋算"}</p>
+        <p className="ip-label">{isGoal ? "这一世的目标" : "当前计划"}</p>
         <input
           ref={inputRef}
           className="ip-input"
           type="text"
           value={draft}
           maxLength={isGoal ? 60 : 40}
-          placeholder={isGoal ? "这一世想成什么事" : "中期的盘算"}
-          aria-label={isGoal ? "此世之志" : "当前谋算"}
+          placeholder={isGoal ? "这一世想成什么事" : "中期的打算"}
+          aria-label={isGoal ? "这一世的目标" : "当前计划"}
           onChange={(e) => setDraft(e.target.value)}
           onKeyDown={(e) => {
             if (e.key === "Enter") {
@@ -73,15 +73,15 @@ export default function IntentPanel({ goal, scheme, onSetGoal, onSetScheme }) {
     <section className="intent-panel" aria-label="意图面板">
       <p className="ip-mark">
         意 图
-        <Hint text="此世之志＝长线志向：改写作废当前这一卷的谋篇，引擎重新起卷。当前谋算＝近处盘算：改写只调眼下的取势，卷不废、弧线照走。" />
+        <Hint text="这一世的目标＝长线志向：改写后当前这一卷的走向作废，引擎重新展开。当前计划＝近期打算：改写只调眼下的取势，主线照走。" />
       </p>
-      <button type="button" className="ip-row" onClick={() => begin("goal", goal)} title="改写此世之志">
-        <span className="ip-name">此世之志</span>
+      <button type="button" className="ip-row" onClick={() => begin("goal", goal)} title="改写这一世的目标">
+        <span className="ip-name">这一世的目标</span>
         <span className="ip-value">{goal || "未定——点此写下这一世想成的事"}</span>
       </button>
-      <button type="button" className="ip-row" onClick={() => begin("scheme", scheme)} title="改写当前谋算">
-        <span className="ip-name">当前谋算</span>
-        <span className="ip-value">{scheme || "未设——点此写下中期的盘算"}</span>
+      <button type="button" className="ip-row" onClick={() => begin("scheme", scheme)} title="改写当前计划">
+        <span className="ip-name">当前计划</span>
+        <span className="ip-value">{scheme || "未设——点此写下中期的打算"}</span>
       </button>
     </section>
   );

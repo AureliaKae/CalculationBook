@@ -122,7 +122,7 @@ export function ReselectCard({ world, onReselect }) {
           ))}
         </div>
       ) : (
-        <p className="role-desc">这本书的身份目录暂无可选来路——回案头重新起稿这一本。</p>
+        <p className="role-desc">这本书的身份目录暂无可选来路——返回后重新起稿这一本。</p>
       )}
     </section>
   );

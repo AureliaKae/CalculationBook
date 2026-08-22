@@ -43,7 +43,7 @@ export function classifyBakeError({ name = "", status, message = "" } = {}) {
     return {
       kind: "model",
       title: "笔杆型号不存在",
-      advice: "文房里这个模型名写错了或已下线，改一个再试。",
+      advice: "设置里这个模型名写错了或已下线，改一个再试。",
       retryable: false,
     };
   }

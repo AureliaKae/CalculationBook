@@ -59,11 +59,11 @@ test("402 余额用尽不可重试,提示充值或换凭证", () => {
   assert.match(result.advice, /充值/);
 });
 
-test("404 是模型名写错或下线,指向文房且不给重试", () => {
+test("404 是模型名写错或下线,指向设置且不给重试", () => {
   const result = classifyBakeError({ status: 404, message: "Model API 404: model not found" });
   assert.equal(result.kind, "model");
   assert.equal(result.retryable, false);
-  assert.match(result.advice, /文房/);
+  assert.match(result.advice, /设置/);
 });
 
 test("模型交不出合法 JSON 归为内容失败,换模型可重试", () => {

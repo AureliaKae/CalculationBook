@@ -27,7 +27,7 @@ export default class ErrorBoundary extends Component {
             <p className="imp-head">这一页算破了</p>
             <p className="cf-detail">
               界面出了差错，稿面没能画完。书库、进度与设置都在本机盘上，
-              一并无损——点下面重开即可回到上次落笔处。
+              一并无损——点下面重开即可回到上次进度处。
             </p>
             <div className="imp-acts">
               <button

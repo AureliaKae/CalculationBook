@@ -72,13 +72,13 @@ export default function BakeHud({ jobs, onCancel, onEnter, onRetry, onDismiss })
                 title={job.degraded ? "档案有降级标记，可照常入卷" : "进入这本书"}
                 onClick={() => onEnter(job.bookId, jobId)}
               >
-                《{job.bookTitle}》成卷 · 入画
+                《{job.bookTitle}》起稿完成 · 打开
               </button>
               <button
                 type="button"
                 className="bake-x"
                 title="收起这行"
-                aria-label={`收起《${job.bookTitle}》的成卷提示`}
+                aria-label={`收起《${job.bookTitle}》的完成提示`}
                 onClick={() => onDismiss(jobId)}
               >
                 ✕

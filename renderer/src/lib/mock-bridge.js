@@ -331,7 +331,7 @@ export const mockBridge = {
       emit("phase", "opening");
       await wait(1200);
       const roleText = profile.customRoleName || profile.roleName || "无名之辈";
-      const opening = `${profile.name}以${MOCK_REALMS.find((r) => r.id === profile.realmTraitId)?.name ?? roleText}之姿，来到${MOCK_LOCATIONS.find((l) => l.id === profile.locationId)?.name ?? "书页翻开的地方"}。${profile.background ? `\n\n${profile.background}\n` : ""}\n此刻想做什么，落笔便知。`;
+      const opening = `${profile.name}以${MOCK_REALMS.find((r) => r.id === profile.realmTraitId)?.name ?? roleText}之姿，来到${MOCK_LOCATIONS.find((l) => l.id === profile.locationId)?.name ?? "书页翻开的地方"}。${profile.background ? `\n\n${profile.background}\n` : ""}\n此刻想做什么，写下便知。`;
       story.opening = opening;
       lastView = { ...openingViewMock(), opening };
       return lastView;
@@ -367,13 +367,13 @@ export const mockBridge = {
       return openingViewMock();
     },
     async intentOptions({ intent }) {
-      if (!story || story.dead) throw new Error("这一世已经落幕，请另起一稿");
+      if (!story || story.dead) throw new Error("这一世已经落幕，请重开一世");
       emit("phase", "directing");
       await wait(1100);
       emit("phase", "options-check");
       // 演示 fallback：意图带「不可行」时走兜底路径（兜底已删，返回空选项）
       if (/不可行|做不到/.test(String(intent))) {
-        return { error: "这个方向眼下无路可走——换个写法再落一笔。", intent, options: [] };
+        return { error: "这个方向眼下无路可走——换个写法再发一次。", intent, options: [] };
       }
       const turn = TURNS[Math.min(story.turns.length, TURNS.length - 1)];
       // 观望项已删：watch 类选项不再下发

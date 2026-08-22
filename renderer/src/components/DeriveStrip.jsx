@@ -29,9 +29,9 @@ export default function DeriveStrip({ mode = "simple", phases = [], inkedChars =
       {isKeyTurn && <span className="ds-key">关键回合 · </span>}
       {phaseCopy(phases[phases.length - 1])}
       <span className="dots"> …</span>
-      <span className="ds-progress mono">
-        {elapsed}s{inkedChars > 0 ? ` · 已落墨 ${inkedChars} 字` : ""}
-      </span>
+        <span className="ds-progress mono">
+          {elapsed}s{inkedChars > 0 ? ` · 已生成 ${inkedChars} 字` : ""}
+        </span>
       {mode === "deep" && over45s && onStop && (
         <button type="button" className="ghost-btn ds-stop" onClick={onStop}>
           停一下

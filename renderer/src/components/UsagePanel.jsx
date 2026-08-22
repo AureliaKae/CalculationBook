@@ -7,7 +7,7 @@ import { mapTerms } from "../lib/terms.js";
 import Hint from "./Hint.jsx";
 import { REDUCED } from "../lib/motion.js";
 
-// 文房「账目」面板：BYOK 成本感知——按书累计的输入/输出 token 与请求数。
+// 设置「用量」面板：BYOK 成本感知——按书累计的输入/输出 token 与请求数。
 // 定性字数换算（1 token ≈ 0.6 个汉字，只给量级不给价格）。
 const wanzi = (tokens) => {
   const chars = tokens * 0.6;
@@ -21,7 +21,7 @@ export default function UsagePanel() {
   const [attempt, setAttempt] = useState(0);
   const listRef = useRef(null);
 
-  // 账目行逐条弹出：异步数据回来时不再整块干切。
+  // 用量行逐条弹出：异步数据回来时不再整块干切。
   useGSAP(
     () => {
       if (REDUCED || !listRef.current) return;
@@ -40,7 +40,7 @@ export default function UsagePanel() {
     api.settings
       .usage()
       .then((result) => alive && setData(result))
-      .catch((e) => alive && setError(mapTerms(e?.message ?? "账目读取失败")));
+      .catch((e) => alive && setError(mapTerms(e?.message ?? "用量读取失败")));
     return () => {
       alive = false;
     };
@@ -60,9 +60,9 @@ export default function UsagePanel() {
       </div>
     );
   }
-  if (!data) return <p className="studio-note">账目翻开中…</p>;
+  if (!data) return <p className="studio-note">用量读取中…</p>;
   if (!data.books.length) {
-    return <p className="studio-note">还没有用量——烧一本书、走一手，账就记上了。</p>;
+    return <p className="studio-note">还没有用量——起稿一本书、走一个回合，就开始统计了。</p>;
   }
   return (
     <section className="brush-card">

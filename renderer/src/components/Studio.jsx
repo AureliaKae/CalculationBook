@@ -13,10 +13,10 @@ import { useModalDialog } from "./modal.js";
 import { REDUCED } from "../lib/motion.js";
 
 const PANELS = [
-  { id: "ink", label: "墨水坊", note: "API 密钥" },
-  { id: "brush", label: "草稿笔 · 定稿笔", note: "模型分配" },
-  { id: "bake", label: "起稿台", note: "并发与输出上限" },
-  { id: "usage", label: "账目", note: "用量" },
+  { id: "ink", label: "API 密钥", note: "服务商与密钥" },
+  { id: "brush", label: "模型选择", note: "快速与强力" },
+  { id: "bake", label: "起稿设置", note: "并发与输出上限" },
+  { id: "usage", label: "用量", note: "token 统计" },
 ];
 
 // 添加墨行的厂商预设：与主进程保存侧白名单（assertSecureEndpoint/
@@ -116,9 +116,9 @@ export default function Studio({ locked = false, settings, onSettingsSaved, onBa
       if (result?.models) {
         setModels((m) => ({ ...m, [credential.id]: result.models }));
         const autofilled = autofillSlots(credential);
-        onNote(autofilled ? "墨色已验。笔杆已代配，可随时改。" : "墨色已验。");
+        onNote(autofilled ? "测试通过。模型已代配，可随时改。" : "测试通过。");
       } else {
-        onNote(result?.error ? mapTerms(result.error) : "试墨未成。");
+        onNote(result?.error ? mapTerms(result.error) : "测试未通过。");
       }
     } catch (error) {
       onNote(mapTerms(error.message));
@@ -161,7 +161,7 @@ export default function Studio({ locked = false, settings, onSettingsSaved, onBa
       credentials: [...draft.credentials, { id, label, baseUrl }],
     });
     closeAdd();
-    onNote("墨行已添，贴入 API Key 后试墨。");
+    onNote("服务商已添加，贴入 API Key 后测试。");
   }
 
   /* 下架墨行：草稿笔/定稿笔指着它的一并清空指向（保存侧 normalizeSlot
@@ -187,14 +187,14 @@ export default function Studio({ locked = false, settings, onSettingsSaved, onBa
       strong: clearIfPointed("strong"),
     });
     setRemoving(null);
-    onNote("墨行已下架，存稿后生效。");
+    onNote("服务商已移除，保存后生效。");
   }
 
   async function save(extra = {}) {
     // 设置未加载完成前禁止存稿（C8）：draft 的兜底值会把空凭证表整表写下去，
     // 一键抹掉已存的全部 Key。settings===null 说明读取还没回来（或失败）。
     if (!settings) {
-      onNote("账目还没翻开——稍候再存稿。");
+      onNote("设置还没加载完——稍候再保存。");
       return null;
     }
     setSaving(true);
@@ -210,7 +210,7 @@ export default function Studio({ locked = false, settings, onSettingsSaved, onBa
       };
       const saved = await api.settings.save(payload);
       onSettingsSaved(saved);
-      onNote("已存稿。");
+      onNote("已保存。");
       return saved;
     } catch (error) {
       onNote(mapTerms(error.message));
@@ -224,8 +224,8 @@ export default function Studio({ locked = false, settings, onSettingsSaved, onBa
     <div className="app studio">
       <header className="topbar">
         <div>
-          <span className="book">文房</span>
-          <span className="chapter">{locked ? "先配墨" : "墨水与笔"}</span>
+          <span className="book">设置</span>
+          <span className="chapter">{locked ? "先配置" : "密钥与模型"}</span>
         </div>
         <div className="right">
           {!locked && (
@@ -239,12 +239,12 @@ export default function Studio({ locked = false, settings, onSettingsSaved, onBa
 
       {locked && (
         <p className="studio-locknote">
-          没有可用的墨（API 密钥）之前，起稿与入题都用不了真模型。配一把钥匙即可开始。
+          还没有可用的 API 密钥，起稿与入题都用不了真模型。填入一把密钥即可开始。
         </p>
       )}
 
       <main className="studio-body">
-        <nav className="studio-catalog" aria-label="文房目录">
+        <nav className="studio-catalog" aria-label="设置目录">
           {PANELS.map((it) => (
             <button
               key={it.id}
@@ -263,7 +263,7 @@ export default function Studio({ locked = false, settings, onSettingsSaved, onBa
             <>
               {settings?.decryptFailed > 0 && (
                 <p className="studio-note ink-warn">
-                  系统密钥库变了——原 Key 已无法解密，请把各墨行的 Key 重新填一遍。
+                  系统密钥库变了——原 Key 已无法解密，请把各服务商的 Key 重新填一遍。
                 </p>
               )}
               {settings && settings.secureStorage === false && (
@@ -273,7 +273,7 @@ export default function Studio({ locked = false, settings, onSettingsSaved, onBa
               )}
               {draft.credentials.length === 0 && (
                 <p className="studio-note ink-empty">
-                  还没有墨行。点下方「＋ 添加墨行」选一家，贴入 API Key 试墨即可开始。
+                  还没有服务商。点下方「＋ 添加服务商」选一家，贴入 API Key 测试即可开始。
                 </p>
               )}
               {draft.credentials.map((c) => (
@@ -282,7 +282,7 @@ export default function Studio({ locked = false, settings, onSettingsSaved, onBa
                     <span className={"dot " + (c.hasApiKey || keyEdits[c.id] ? "ok" : "")} />
                     <span className="ink-name">{c.label || c.baseUrl}</span>
                     <span className="ink-status">
-                      {keyEdits[c.id] ? "新墨待验" : c.hasApiKey ? "有墨" : "未配墨"}
+                      {keyEdits[c.id] ? "新 Key 待验" : c.hasApiKey ? "已配 Key" : "未配 Key"}
                     </span>
                   </div>
                   <div className="ink-key mono">
@@ -290,13 +290,13 @@ export default function Studio({ locked = false, settings, onSettingsSaved, onBa
                       ? keyEdits[c.id].slice(0, 4) + "****（新填）"
                       : c.hasApiKey
                         ? "sk-****************************（留存）"
-                        : "—— 未配墨 ——"}
+                        : "—— 未配 Key ——"}
                   </div>
                   <div className="ink-acts">
                     <input
                       className="pen-input ink-input"
                       type="password"
-                      placeholder={c.hasApiKey ? "换一把墨（留空则不变）" : "填入 API Key"}
+                      placeholder={c.hasApiKey ? "换一把 Key（留空则不变）" : "填入 API Key"}
                       aria-label={`${c.label} 的 API Key`}
                       value={keyEdits[c.id] ?? ""}
                       onChange={(e) =>
@@ -309,7 +309,7 @@ export default function Studio({ locked = false, settings, onSettingsSaved, onBa
                       disabled={testing === c.id}
                       onClick={() => testInk(c)}
                     >
-                      {testing === c.id ? "试墨中…" : "试墨"}
+                      {testing === c.id ? "测试中…" : "测试"}
                     </button>
                     <button
                       type="button"
@@ -326,7 +326,7 @@ export default function Studio({ locked = false, settings, onSettingsSaved, onBa
               ))}
               <div className="ink-add-row">
                 <button type="button" className="ghost-btn" onClick={() => setAdding(true)}>
-                  ＋ 添加墨行
+                  ＋ 添加服务商
                 </button>
               </div>
               <p className="studio-note">密钥经系统凭据加密，永不出主进程。</p>
@@ -336,8 +336,8 @@ export default function Studio({ locked = false, settings, onSettingsSaved, onBa
           {panel === "brush" && (
             <>
               {[
-                { key: "fast", badge: "草", label: "草稿笔 · 快", hint: "快笔：起稿与摘要。价廉，量大。" },
-                { key: "strong", badge: "定", label: "定稿笔 · 强", hint: "强笔：叙事回合。价高，字精。" },
+                { key: "fast", badge: "快", label: "快速模型", hint: "起稿与摘要用。价廉，量大。" },
+                { key: "strong", badge: "强", label: "强力模型", hint: "叙事回合用。价高，字精。" },
               ].map((slot) => {
                 const current = draft[slot.key] ?? {};
                 const credential = draft.credentials.find((c) => c.id === current.credentialId);
@@ -348,11 +348,11 @@ export default function Studio({ locked = false, settings, onSettingsSaved, onBa
                       <span className="mini-badge">{slot.badge}</span>
                       <span>
                         {slot.label}
-                        <Hint text="墨行＝用哪一条 API 密钥；笔杆＝用哪个模型。" />
+                        <Hint text="服务商＝用哪一条 API 密钥；模型名＝用哪个模型。" />
                       </span>
                     </div>
                     <label className="brush-row">
-                      <span className="brush-l">墨行</span>
+                      <span className="brush-l">服务商</span>
                       <select
                         className="mono brush-select"
                         value={current.credentialId ?? ""}
@@ -365,13 +365,13 @@ export default function Studio({ locked = false, settings, onSettingsSaved, onBa
                       </select>
                     </label>
                     <label className="brush-row">
-                      <span className="brush-l">笔杆</span>
+                      <span className="brush-l">模型</span>
                       <input
                         className="mono brush-select brush-free"
                         type="text"
                         list={`models-${slot.key}`}
                         value={current.model ?? ""}
-                        placeholder="模型名（试墨后可选）"
+                        placeholder="模型名（测试后可选）"
                         onChange={(e) => patch({ [slot.key]: { ...current, model: e.target.value.trim() } })}
                       />
                       <datalist id={`models-${slot.key}`}>
@@ -383,8 +383,8 @@ export default function Studio({ locked = false, settings, onSettingsSaved, onBa
                     {slot.key === "strong" && (
                       <div className="brush-row">
                         <span className="brush-l">
-                          腹稿（思考链）
-                          <Hint text="定稿笔在下笔前先打腹稿：开则慢而深思，叙事更稳；关则快而便宜。" />
+                          思考链
+                          <Hint text="强力模型生成叙事前先打思考链：开则慢而深思，叙事更稳；关则快而便宜。" />
                         </span>
                         <button
                           type="button"
@@ -410,9 +410,9 @@ export default function Studio({ locked = false, settings, onSettingsSaved, onBa
               <div className="bake-row">
                 <span className="brush-l">
                   起稿并发
-                  <Hint text="起稿时同时跑几路请求。路宽起得快，但更容易撞墨行的限流。" />
+                  <Hint text="起稿时同时跑几路请求。路宽起得快，但更容易撞服务商的限流。" />
                 </span>
-                <span className="studio-note">留空=按墨行官方建议（DeepSeek 4，其余 3）</span>
+                <span className="studio-note">留空=按服务商官方建议（DeepSeek 4，其余 3）</span>
                 <input
                   className="mono brush-select bake-conc"
                   type="text"
@@ -436,7 +436,7 @@ export default function Studio({ locked = false, settings, onSettingsSaved, onBa
                   onChange={(e) => patch({ maxTokens: e.target.value.replace(/[^\d]/g, "").slice(0, 6) })}
                 />
               </div>
-              <p className="studio-note">存稿后生效。</p>
+              <p className="studio-note">保存后生效。</p>
             </>
           )}
 
@@ -445,9 +445,9 @@ export default function Studio({ locked = false, settings, onSettingsSaved, onBa
       </main>
 
       <footer className="studio-foot">
-        <span className="save-note" aria-live="polite">{locked ? "配墨后即可离开" : ""}</span>
+        <span className="save-note" aria-live="polite">{locked ? "配置后即可离开" : ""}</span>
         <button type="button" className="pen-submit" onClick={() => save()} disabled={saving}>
-          {saving ? "存稿中…" : "存稿"}
+          {saving ? "保存中…" : "保存"}
         </button>
         {!locked ? null : (
           <button type="button" className="ghost-btn" onClick={onBack}>
@@ -466,7 +466,7 @@ export default function Studio({ locked = false, settings, onSettingsSaved, onBa
       >
         {adding && (
           <div className="imp-frame">
-            <p className="imp-head">添加墨行</p>
+            <p className="imp-head">添加服务商</p>
             <div className="ink-add-opts">
               {PROVIDER_PRESETS.map((preset) => (
                 <button
@@ -519,9 +519,9 @@ export default function Studio({ locked = false, settings, onSettingsSaved, onBa
         state={
           removing
             ? {
-                title: `下架「${removing.label || removing.baseUrl}」？`,
-                detail: "草稿笔/定稿笔若指着这条墨行，指向会一并清空。下架后记得存稿。",
-                confirmLabel: "下架",
+                title: `移除「${removing.label || removing.baseUrl}」？`,
+                detail: "快速/强力模型若用着这条服务商，指向会一并清空。移除后记得保存。",
+                confirmLabel: "移除",
                 onConfirm: () => removeCredential(removing),
               }
             : null

@@ -150,7 +150,7 @@ export default function CharDialog({ open, sheet, journal = [], onClose }) {
                 ))}
               </ul>
             ) : (
-              <p className="char-empty">刚落笔，履历还空着。</p>
+              <p className="char-empty">刚开始，履历还空着。</p>
             )}
           </div>
 

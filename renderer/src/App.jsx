@@ -366,7 +366,7 @@ export default function App() {
     (book) => {
       setConfirmAsk({
         title: `补全《${book.title}》的粗读？`,
-        detail: "只读采样漏掉的批次（已读的不重复计费），随后用更全的摘要重建世界档案。对局、进度与存稿都保留。",
+        detail: "只读采样漏掉的批次（已读的不重复计费），随后用更全的摘要重建世界档案。对局、进度与存档都保留。",
         confirmLabel: "补全粗读",
         onConfirm: () => {
           api.library
@@ -542,7 +542,7 @@ export default function App() {
       const watchdog = window.setTimeout(() => {
         setPhase((current) => {
           if (current === "deriving") {
-            note("演算迟迟未归——先回稿面，可再落一笔重试。");
+            note("推演迟迟未归——先回稿面，可再发一次重试。");
             return "read";
           }
           return current;

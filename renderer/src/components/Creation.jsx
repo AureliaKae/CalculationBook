@@ -102,7 +102,7 @@ export default function Creation({ world, successor = false, prefill, storyPhase
     if (busy) return;
     const trimmed = name.trim();
     if (!trimmed) {
-      setErr("稿上无名字，落笔无主。");
+      setErr("还没写名字。");
       return;
     }
     if (nameHint) {
@@ -140,9 +140,9 @@ export default function Creation({ world, successor = false, prefill, storyPhase
     <div className="app creation">
       <header className="cre-head">
         <button type="button" className="ghost-btn" disabled={busy} onClick={onCancel}>
-          {successor ? "回终局" : "回案头"}
+          {successor ? "回终局" : "返回"}
         </button>
-        <span className="cre-title">{successor ? "另起一稿" : "开题"}</span>
+        <span className="cre-title">{successor ? "开启新一世" : "建立角色"}</span>
         <WinCtl />
       </header>
 
@@ -150,18 +150,18 @@ export default function Creation({ world, successor = false, prefill, storyPhase
         <div className="cre-sheet" ref={bodyRef}>
           {busy ? (
             <div className="cre-wait" aria-live="polite">
-              <h2 className="cre-q">{successor ? "落笔续稿" : "落笔入卷"}</h2>
+              <h2 className="cre-q">{successor ? "正在开启新一世" : "正在开始游戏"}</h2>
               <p className="cre-hint">
-                依你的定约写下开场——这一笔要走上片刻，且看它写成什么。
+                依你的选择写下开场——这一段要生成片刻，且看它写成什么。
               </p>
               <DeriveStrip mode="simple" phases={[storyPhase || "opening"]} />
             </div>
           ) : (
             <>
-              <h2 className="cre-q">{successor ? "另起一稿" : "开题"}</h2>
+              <h2 className="cre-q">{successor ? "开启新一世" : "建立角色"}</h2>
               <p className="cre-hint">
                 {successor
-                  ? "新的一世，重新落笔——此问只定起点，不定命数。"
+                  ? "新的一世重新开始——此问只定起点，不定命数。"
                   : "此问只定起点，不定命数——性子由故事养出来，身份由引擎配来路。"}
               </p>
 
@@ -232,8 +232,8 @@ export default function Creation({ world, successor = false, prefill, storyPhase
 
               <div className="cre-field">
                 <span className="cre-label">
-                  入世之志
-                  <Hint text="这一世的长线志向。引擎据此谋篇布局；空着也行，先跟着书里的默认走。" />
+                  这一世的目标
+                  <Hint text="这一世的长线目标。引擎据此安排故事走向；空着也行，先跟着书里的默认走。" />
                 </span>
                 <input
                   className="cre-wish-input"
@@ -241,7 +241,7 @@ export default function Creation({ world, successor = false, prefill, storyPhase
                   value={motivation}
                   maxLength={120}
                   placeholder="这一世想成什么事（可空——空则依书里的默认）"
-                  aria-label="入世之志"
+                  aria-label="这一世的目标"
                   onChange={(e) => setMotivation(e.target.value)}
                   onKeyDown={(e) => {
                     if (e.key === "Enter") {
@@ -252,24 +252,24 @@ export default function Creation({ world, successor = false, prefill, storyPhase
                 />
               </div>
 
-              <p className="cre-base-note">
-                {successor && inheritedBigFive
-                  ? "习性难改——上一世养成的性子随你转世，写不清意图时它仍会替你拿主意，此后每一步继续重塑它。"
-                  : "不选性子。你的性子，将由你在世间的每一次落笔养出来——写不清意图的时候，已成形的性子会替你拿主意。"}
-                <Hint text="心性五维：开放性、尽责性、外向性、宜人性、情绪稳定性。转世时全额带走。" />
-              </p>
               {successor && inheritedBigFive ? (
-                <div className="bf-options">
-                  {BIG_FIVE_ORDER.map((dim) => {
-                    const level = inheritedBigFive[dim];
-                    return (
-                      <span key={dim} className={"bf-chip" + (level !== "均衡" ? " tilt" : "")}>
-                        {BIG_FIVE_LABELS[dim]}
-                        {level !== "均衡" ? ` · ${level}` : ""}
-                      </span>
-                    );
-                  })}
-                </div>
+                <>
+                  <p className="cre-base-note">
+                    习性难改——上一世养成的性子随你转世，写不清意图时它仍会替你拿主意，此后每一步继续重塑它。
+                    <Hint text="心性五维：开放性、尽责性、外向性、宜人性、情绪稳定性。转世时全额带走。" />
+                  </p>
+                  <div className="bf-options">
+                    {BIG_FIVE_ORDER.map((dim) => {
+                      const level = inheritedBigFive[dim];
+                      return (
+                        <span key={dim} className={"bf-chip" + (level !== "均衡" ? " tilt" : "")}>
+                          {BIG_FIVE_LABELS[dim]}
+                          {level !== "均衡" ? ` · ${level}` : ""}
+                        </span>
+                      );
+                    })}
+                  </div>
+                </>
               ) : null}
 
               {nameHint && <p className="cre-err">{nameHint}</p>}
@@ -277,7 +277,7 @@ export default function Creation({ world, successor = false, prefill, storyPhase
 
               <div className="imp-acts">
                 <button type="button" className="pen-submit" onClick={confirm}>
-                  {successor ? "落笔续稿" : "落笔入卷"}
+                  {successor ? "开启新一世" : "开始游戏"}
                 </button>
               </div>
 

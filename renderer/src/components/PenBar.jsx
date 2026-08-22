@@ -57,8 +57,8 @@ export default function PenBar({ prompt, onSubmit }) {
   return (
     <form className="pen" onSubmit={submit} ref={formRef}>
       <p className="pen-label">
-        落笔 · {prompt}
-        <Hint text="写下这一刻想做的事，四十字以内。引擎围绕它给出几条可行解法，选一条暗骰落定。" />
+        行动 · {prompt}
+        <Hint text="写下这一刻想做的事，四十字以内。引擎围绕它给出几条可行做法，选一条后自动判定结果。" />
       </p>
       <div className="pen-row">
         <input
@@ -69,12 +69,12 @@ export default function PenBar({ prompt, onSubmit }) {
           onChange={change}
           onKeyDown={onKeyDown}
           placeholder="此刻想做什么……"
-          aria-label="落笔：写下此刻意图"
+          aria-label="行动：写下此刻意图"
           autoComplete="off"
         />
         <span className={"pen-count" + (len >= 40 ? " full" : "")}>{len}/40</span>
         <button type="submit" className="pen-submit" disabled={!text.trim()}>
-          落笔
+          发送
         </button>
       </div>
     </form>

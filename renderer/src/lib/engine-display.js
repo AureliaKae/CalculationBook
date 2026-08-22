@@ -42,29 +42,29 @@ export function bakePercent(progress) {
   }
 }
 
-// 演算相位 → 页缘状态行文案（分层：过程抽象，不泄露推理）。
+// 演算相位 → 页缘状态行文案（直白版：过程说清在做什么，不玩梗）。
 export function phaseCopy(phase) {
   switch (phase) {
     case "opening":
-      return "循意起笔";
+      return "推演中";
     // 反向建角（拍板 2026-08-20）：进建角页即拟三套候选的等待相位。
     case "proposals":
-      return "依愿拟稿";
+      return "生成候选中";
     case "directing":
-      return "循意起笔";
+      return "推演中";
     // 关键回合（交锋收束/濒死一搏/弧线关键节拍）的叙事酝酿：强模型全笔，
     // 等待远长于普通回合；前缀「关键回合」由 DeriveStrip 另加。
     case "key-turn":
-      return "慎思落笔";
+      return "关键回合推演中";
     case "narrative-done":
     case "structure":
     case "options-check":
-      return "推演诸解";
+      return "生成选项中";
     case "epilogue":
     case "rewriting":
     case "repair":
     case "observing":
-      return "掷骰无回";
+      return "判定中";
     default:
       return "推演中";
   }
