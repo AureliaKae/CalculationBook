@@ -190,9 +190,6 @@ export default function Desk({
       <footer className="desk-toolbar">
         <p className="desk-note" aria-live="polite">{note}</p>
         <div className="desk-tools">
-          <button type="button" className="navbit" onClick={() => setImportOpen(true)}>
-            导入
-          </button>
           <button type="button" className="navbit" onClick={onImportWorld}>
             导入世界
           </button>
