@@ -383,6 +383,53 @@ export default function App() {
     [note],
   );
 
+  /* 补挂原文：轻装档导入的书挂上读者自备的原著。主进程按档案目录比对
+     「同一本书」，这里只负责把比对结果说清楚、把粗读成本亮出来。 */
+  const attachSourceBook = useCallback(
+    (book) => {
+      api.library
+        .attachSource(book.id)
+        .then((result) => {
+          if (result?.status !== "confirm") return;
+          const compare = result.indexChapterCount
+            ? `档案目录 ${result.indexChapterCount} 章，标题对上 ${result.matched} 个`
+            : "这本书没有留下章节目录，无法核对版本";
+          const loose =
+            result.verdict !== "match"
+              ? "章数或标题与档案目录不完全一致（可能是不同版本），确认是同一本书再继续。"
+              : "";
+          const cost = Number.isFinite(result.estimatedInputTokens)
+            ? `约 ${Math.round(result.estimatedInputTokens / 10000)} 万输入 token`
+            : "一遍粗读";
+          setConfirmAsk({
+            title: `把这份原文补挂给《${result.bookTitle}》？`,
+            detail:
+              `解析到 ${result.chapterCount} 章（${compare}）。` +
+              (loose ? loose : "") +
+              `补挂后自动重跑一遍粗读重建正典账本（${cost}）：文风范本、原著此刻、人物精读全部恢复。` +
+              "进行中的对局不回溯，重新开卷即生效。",
+            confirmLabel: "补挂并粗读",
+            onConfirm: () => {
+              api.library
+                .attachSourceConfirm({ action: "attach" })
+                .then((done) => {
+                  refreshBooks();
+                  note(`《${done.bookTitle}》原文已补挂，粗读重建账本中…`);
+                })
+                .catch((error) => {
+                  note(error.message);
+                  refreshBooks();
+                });
+            },
+          });
+        })
+        .catch((error) => {
+          note(error.message);
+        });
+    },
+    [note, refreshBooks],
+  );
+
   /* 编年史入口：案头书卡「编年」→ 全屏只读视图。 */
   const openChronicle = useCallback((book) => {
     setChronicle({ bookId: book.id, title: book.title });
@@ -801,6 +848,7 @@ export default function App() {
           onRestartBook={restartBook}
           onRebakeBook={rebakeBook}
           onTopupCoarse={topupCoarseBook}
+          onAttachSource={attachSourceBook}
           onChronicle={openChronicle}
           onRemoveBook={removeBook}
           onExportBook={exportBook}

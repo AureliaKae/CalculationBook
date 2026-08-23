@@ -263,6 +263,12 @@ export const mockBridge = {
     async importWorldConfirm() {
       throw new Error("浏览器演示不支持导入世界，请在桌面版使用");
     },
+    async attachSource() {
+      throw new Error("浏览器演示不支持补挂原文，请在桌面版使用");
+    },
+    async attachSourceConfirm() {
+      throw new Error("浏览器演示不支持补挂原文，请在桌面版使用");
+    },
   },
   novel: {
     async choose() {

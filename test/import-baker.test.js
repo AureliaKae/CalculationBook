@@ -6,7 +6,7 @@ import { join } from "node:path";
 import test from "node:test";
 import JSZip from "jszip";
 
-import { digestCoarse, NovelBaker, STAGE_VERSION } from "../src/baker.js";
+import { digestCoarse, novelCachePrefix, NovelBaker, STAGE_VERSION } from "../src/baker.js";
 import { parseNovel, splitChapters } from "../src/novel-import.js";
 
 test("TXT importer splits Chinese chapter headings", async () => {
@@ -1698,4 +1698,105 @@ test("threads 片认并行多线,people 片产出 POV 清单(拍板 2026-08-20)"
   assert.match(people, /povCharacters/);
 
   assert.deepEqual(result.world.povCharacters, ["p1", "p2"], "POV 清单随人物片归一进档");
+});
+
+test("定向粗读（补挂原文）：只烧摘要日志，不探针不文风不并片，续烧语义照常", async () => {
+  const cacheDirectory = await mkdtemp(join(tmpdir(), "bake-coarse-only-"));
+  let coarseCalls = 0;
+  let otherCalls = 0;
+  const completeJson = async (messages) => {
+    const prompt = messages[0].content;
+    if (prompt.includes("提取小说片段中的角色")) {
+      coarseCalls += 1;
+      return { extracted: true };
+    }
+    otherCalls += 1;
+    return { extracted: true };
+  };
+  const baker = new NovelBaker({ cacheDirectory, completeJson, batchCharacters: 5 });
+  const novel = {
+    title: "雾书",
+    format: "txt",
+    chapters: [
+      { index: 1, title: "一", text: "12345" },
+      { index: 2, title: "二", text: "67890" },
+    ],
+  };
+
+  const result = await baker.bake(novel, { coarseOnly: true });
+  assert.deepEqual(result, { coarseOnly: true, groupsRead: 2, groupsTotal: 2 });
+  assert.equal(coarseCalls, 2, "两个批次各读一遍");
+  assert.equal(otherCalls, 0, "探针/题材/文风/切入精读/世界片一概不跑");
+  const journal = (await readdir(cacheDirectory)).filter((name) => name.endsWith(".summaries.jsonl"));
+  assert.equal(journal.length, 1, "摘要日志已落盘");
+  // 命脉断言：日志必须落在游玩侧 loadCanonLedger 的取用路径上（主进程按
+  // novelCachePrefix(书名+全文) + sha1(批次参数，缺省 default) + w3 找账本），
+  // 错一段账本就永远找不到，粗读等于白烧。主进程不传 batchCharacters，
+  // 即与账本侧的 "default" 同参。
+  const batchStamp = String(baker.batchCharacters ?? "default");
+  const expectedJournal =
+    `${novelCachePrefix(novel)}-` +
+    `${createHash("sha1").update(batchStamp).digest("hex")}-w3.summaries.jsonl`;
+  assert.deepEqual(journal, [expectedJournal]);
+
+  // 日志烧齐后重跑定向粗读：一个请求都不再发。
+  const again = await baker.bake(novel, { coarseOnly: true });
+  assert.equal(again.groupsRead, 2);
+  assert.equal(coarseCalls, 2);
+});
+
+test("定向粗读之后完整起稿：粗读复用日志，只补文风与五片", async () => {
+  const cacheDirectory = await mkdtemp(join(tmpdir(), "bake-coarse-then-full-"));
+  let coarseCalls = 0;
+  const completeJson = async (messages) => {
+    const prompt = messages[0].content;
+    if (prompt.includes("提取小说片段中的角色")) {
+      coarseCalls += 1;
+      return { extracted: true };
+    }
+    if (prompt.includes("写作风格")) return { narration: "第三人称限知" };
+    if (prompt.includes("人物与身份")) {
+      return {
+        characters: [],
+        factions: [],
+        roleProgression: [],
+        roleTemplates: [
+          { id: "r1", name: "甲", description: "身份甲", locationIds: [], factionIds: [] },
+          { id: "r2", name: "乙", description: "身份乙", locationIds: [], factionIds: [] },
+          { id: "r3", name: "丙", description: "身份丙", locationIds: [], factionIds: [] },
+        ],
+      };
+    }
+    if (prompt.includes("世界骨架")) {
+      return {
+        id: "coarse-then-full",
+        title: "雾书",
+        summary: "港口求生",
+        characters: [],
+        locations: ["码头"],
+        attributes: [{ id: "will", name: "意志", initial: 30 }],
+        stats: [{ id: "life", name: "生命", role: "vital", min: 0, max: 10, initial: 10, zeroConsequence: "昏迷" }],
+        roleTemplates: [],
+        timeline: [],
+        facts: [],
+      };
+    }
+    return { extracted: true };
+  };
+  const baker = new NovelBaker({ cacheDirectory, completeJson, batchCharacters: 5 });
+  const novel = {
+    title: "雾书",
+    format: "txt",
+    chapters: [
+      { index: 1, title: "一", text: "12345" },
+      { index: 2, title: "二", text: "67890" },
+    ],
+  };
+  await baker.bake(novel, { coarseOnly: true });
+  assert.equal(coarseCalls, 2);
+
+  // 补挂后的「重新起稿」路径：粗读命中日志零请求，世界照常烧成。
+  const full = await baker.bake(novel);
+  assert.equal(coarseCalls, 2, "完整起稿复用定向粗读的日志");
+  assert.equal(full.world.id, "coarse-then-full");
 });

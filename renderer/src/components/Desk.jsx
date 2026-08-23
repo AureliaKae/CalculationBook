@@ -18,6 +18,7 @@ export default function Desk({
   onRestartBook,
   onRebakeBook,
   onTopupCoarse,
+  onAttachSource,
   onChronicle,
   onRemoveBook,
   onExportBook,
@@ -113,7 +114,7 @@ export default function Desk({
                     {b.sourceless ? (
                       <span
                         className="fx-flag"
-                        title="导入的世界文件未带原文：文风与「原著此刻」自动降级，不支持重起稿"
+                        title="导入的世界文件未带原文：文风与「原著此刻」自动降级。可「补原文」用自己的原著满血恢复"
                       >
                         无原文
                       </span>
@@ -145,11 +146,22 @@ export default function Desk({
                     >
                       重开
                     </button>
+                    {b.sourceless ? (
+                      <button
+                        type="button"
+                        className="fx-act"
+                        title="挂上你自己的原著（.txt/.epub）：先按档案目录核对是否同一本书，落库后重跑一遍粗读重建正典账本。文风范本、原著此刻、人物精读随之全部恢复"
+                        disabled={Boolean(opening)}
+                        onClick={() => onAttachSource(b)}
+                      >
+                        补原文
+                      </button>
+                    ) : null}
                     {b.coarse?.sampled ? (
                       <button
                         type="button"
                         className="fx-act"
-                        title="补全采样漏掉的粗读批次：只烧缺的部分（已读批次不重复计费），随后用更全的摘要重建世界档案；对局、进度与存档保留"
+                        title="补全采样漏掉的粗读批次：只烧缺的部分（已读批次不重复计费），随后用更全的摘要重建世界档案；对局、进度与存稿保留"
                         disabled={Boolean(opening)}
                         onClick={() => onTopupCoarse(b)}
                       >

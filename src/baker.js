@@ -462,6 +462,8 @@ export class NovelBaker {
       anchorTime,
       // 采样粗读的预算（字符数）：空/非正数 = 全本通读。见 selectCoarseGroups。
       coarseBudgetChars,
+      // 定向粗读（补挂原文）：只烧摘要日志，不产出世界。见下方 coarseOnly 分支。
+      coarseOnly = false,
       onProgress = () => {},
       signal,
     } = {},
@@ -585,7 +587,7 @@ export class NovelBaker {
       if (focusCheckpoint.stageVersion !== STAGE_VERSION) {
         console.warn("[bake] 世界合并阶段结构已升级，旧合并片作废，重新生成（粗读摘要保留）");
         focusCheckpoint = { version: 2, detailed: focusCheckpoint.detailed, stageVersion: STAGE_VERSION };
-      } else if (focusCheckpoint.complete) {
+      } else if (focusCheckpoint.complete && !coarseOnly) {
         const cached = withFullSource(focusCheckpoint.result, novel);
         // openAll/anchorTime 是「进入故事」的设定、不参与成品缓存:换设定重入时成品照用,
         // 但 creationScope 必须按本次请求重写——旧实现原样返回,改设定不生效。
@@ -625,7 +627,9 @@ export class NovelBaker {
     // 模型认知探针(拍板:对照模型认知):只凭书名问一次「你了解这本书吗」,
     // 自报必须用具体专名佐证(probeLevel 降级防胡编)。结果随主检查点缓存
     // (缓存键含模型哈希,换快槽模型自动重探);网络失败不缓存,下次烧制再试。
-    if (!checkpoint.modelProbe) {
+    // 定向粗读（补挂原文）不跑探针/题材/文风——那是完整起稿的产物，这里
+    // 只要摘要日志；三个请求省下，将来真要重起稿再按缓存补。
+    if (!coarseOnly && !checkpoint.modelProbe) {
       stopIfCancelled();
       try {
         const probed = await call(
@@ -649,7 +653,7 @@ export class NovelBaker {
 
     // 题材识别:先问模型一次,失败/低可信再按关键词启发兜底,最后回落「其他」。
     // 题材用于联网搜索关键词与身份/称谓引导,识别失败绝不拦下烧制。
-    if (!checkpoint.genre) {
+    if (!coarseOnly && !checkpoint.genre) {
       const sampleText = styleSampleText(novel.chapters).slice(0, 6000);
       let detected = null;
       try {
@@ -675,7 +679,7 @@ export class NovelBaker {
       await persistNovelMeta();
     }
     const genre = checkpoint.genre ?? "其他";
-    if (!checkpoint.style) {
+    if (!coarseOnly && !checkpoint.style) {
       checkpoint.style = await call(
         [
           {
@@ -769,6 +773,16 @@ export class NovelBaker {
     await persist;
     if (failure) throw failure;
     stopIfCancelled();
+
+    // 定向粗读到站即收工：摘要日志已烧齐，切入精读与世界五片都不属于这次任务
+    // （世界档案来自导入，不重建）。覆盖度按日志实况返回，完成事件据此透出。
+    if (coarseOnly) {
+      const groupsRead = groups.reduce(
+        (count, _, index) => count + (checkpoint.summaries[index] != null ? 1 : 0),
+        0,
+      );
+      return { coarseOnly: true, groupsRead, groupsTotal: groups.length };
+    }
 
     if (!focusCheckpoint.detailed) {
       const focus = novel.chapters.filter((chapter) => Math.abs(chapter.index - focusChapter) <= 1);

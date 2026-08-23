@@ -62,6 +62,11 @@ test("轻装档 round-trip：不带原文，规范形态稳定往返", async () 
   const parsed = await parseWorldBundle(bytes);
   assert.deepEqual(parsed.manifest.meta, { title: "灰港余烬", format: "txt", chapterCount: 2 });
   assert.deepEqual(parsed.chapters, [], "轻装档导入后没有原文");
+  // 章节目录随解析透出：导入侧拿它落盘，补挂原文时做「同一本书」比对。
+  assert.deepEqual(
+    parsed.chapterIndex,
+    CHAPTERS.map(({ index, title }) => ({ index, title })),
+  );
   assert.equal(parsed.summariesText, null);
   assert.equal(parsed.characterCache.length, 1);
   assert.equal(parsed.characterCache[0].name, linCache.name);
@@ -232,6 +237,22 @@ test("章号必须严格递增：重复或乱序的锚系直接拒绝", async ()
     async () => parseWorldBundle(await loaded.generateAsync({ type: "uint8array" })),
     /严格递增/,
   );
+});
+
+test("章节目录的章号与标题同样过纪律：坏目录拒绝导入", async () => {
+  const book = bakedBook(CHAPTERS);
+  const { bytes } = await buildWorldBundle({ ...book });
+  const corrupt = async (mutate) => {
+    const loaded = await JSZip.loadAsync(bytes);
+    const rawIndex = JSON.parse(await loaded.file("chapter-index.json").async("text"));
+    mutate(rawIndex);
+    loaded.file("chapter-index.json", JSON.stringify(rawIndex));
+    return parseWorldBundle(await loaded.generateAsync({ type: "uint8array" }));
+  };
+  // 目录是补挂原文的比对基准，章号乱序或标题非字符串都会让比对失真。
+  await assert.rejects(corrupt((rawIndex) => { rawIndex[1].index = 1; }), /严格递增/);
+  await assert.rejects(corrupt((rawIndex) => { rawIndex[0].index = 0; }), /正整数/);
+  await assert.rejects(corrupt((rawIndex) => { rawIndex[0].title = 42; }), /标题/);
 });
 
 test("格式版本常量随档案走：manifest 与解析器同源", async () => {

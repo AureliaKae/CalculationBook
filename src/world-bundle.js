@@ -333,12 +333,29 @@ export async function parseWorldBundle(bytes) {
   }
 
   // 目录必带：不带原文的档位靠它保住章号锚系，带原文的档位用于一致性核对。
+  // 章号约束与 chapters.json 同一条纪律（严格递增的正整数）——补挂原文时，
+  // 这份目录是「用户手里的原文是不是同一本书」的比对基准，存坏值会让比对
+  // 永远失真，宁可导入时明着拒绝。
   const rawIndex = parseJsonEntry(
     await readEntry(zip, CHAPTER_INDEX_NAME),
     CHAPTER_INDEX_NAME,
   );
   if (!Array.isArray(rawIndex) || rawIndex.length !== manifest.meta.chapterCount) {
     throw new Error("世界文件的目录与 manifest 声明的章节数不符");
+  }
+  const chapterIndex = [];
+  let previousIndex = 0;
+  for (const entry of rawIndex) {
+    if (!entry || typeof entry !== "object") throw new Error("chapter-index.json 条目格式不正确");
+    if (!Number.isInteger(entry.index) || entry.index < 1) {
+      throw new Error("章节目录的章号必须是正整数");
+    }
+    if (entry.index <= previousIndex) throw new Error("章节目录的章号必须严格递增");
+    previousIndex = entry.index;
+    if (typeof entry.title !== "string" || entry.title.length > MAX_TITLE_CHARS) {
+      throw new Error("章节目录的标题格式不正确");
+    }
+    chapterIndex.push({ index: entry.index, title: entry.title });
   }
 
   let chapters = [];
@@ -369,6 +386,7 @@ export async function parseWorldBundle(bytes) {
     manifest,
     ...settled,
     chapters,
+    chapterIndex,
     summariesText,
     characterCache,
   };

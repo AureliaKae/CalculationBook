@@ -94,9 +94,15 @@ ZIP 归档（DEFLATE 压缩），扩展名 `.cpworld`。条目白名单——出
    `validateWorld` + `validateInitialState` 抛错型把关。
    - 软错误（悬空引用、越界数值）修掉后容忍；**不做**最小骨架降级——导入侧没有模型
      可救场，把别人分享的世界偷换成空壳比明着失败更糟。
-4. 无原文档位导入后：`chapters` 为空数组落库，书库 `meta` 标 `sourceless: true`；
+4. 无原文档位导入后：`chapters` 为空数组落库，书库 `meta` 标 `sourceless: true`，
+   章节目录随书落盘 `books/<id>/chapter-index.json`（`meta.chapterCount` 按目录章数落）；
    文风 BM25、「原著此刻」、正典账本、人物精读请求全部走既有的优雅回退路径
    （引擎对空 `sourceChapters` 本就逐点回退，有确定性测试兜底）。
+5. **补挂原文**：读者自备原著（txt/epub）可把轻装档补成满血——导入侧按落盘的
+   章节目录比对「同一本书」（章数与标题，`src/source-match.js`：match/loose 放行、
+   mismatch 拒绝），比对过才把章节写进书位、摘掉 `sourceless`；随后跑一遍**定向
+   粗读**（`bake({ coarseOnly: true })`：只烧摘要日志，不重建世界档案）落账本。
+   文风范本、人物精读随 `sourceChapters` 就位自动恢复；账本走既有的懒加载路径。
 
 ## 版本化策略
 
@@ -110,6 +116,8 @@ ZIP 归档（DEFLATE 压缩），扩展名 `.cpworld`。条目白名单——出
 - 组包/解析/校验全部在 `src/world-bundle.js`（纯 Node，仅依赖 `jszip`），不 import
   Electron——书落库、对话框、缓存归位在 `electron/main.js` 的
   `library:export-world` / `library:import-world` / `library:import-world-confirm`
-  三个 IPC 处理器里。
+  三个 IPC 处理器里；补挂原文走 `library:attach-source` /
+  `library:attach-source-confirm`（比对逻辑在 `src/source-match.js`，
+  定向粗读是 `NovelBaker.bake` 的 `coarseOnly` 档）。
 - 对局存档（progress v4）不在本格式内：它内嵌完整 world 且硬依赖书库原文，需要另立
   格式，暂不支持。

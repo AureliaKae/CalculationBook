@@ -70,11 +70,14 @@ export class LibraryStore {
   async add({ world, initialState, source, sourceless = false }) {
     const id = bookId(source.title, source.format);
     await mkdir(this.path(id), { recursive: true });
+    // 无原文导入时以档案目录的章数落 meta：书架的「N 章」是档案真实规模，
+    // 不是 0；目录本体另存 chapter-index.json，补挂原文时做同书比对。
+    const chapterIndex = sourceless && Array.isArray(source.chapterIndex) ? source.chapterIndex : [];
     const meta = {
       id,
       title: source.title,
       format: source.format,
-      chapterCount: source.chapters.length,
+      chapterCount: source.chapters.length || chapterIndex.length,
       addedAt: new Date().toISOString(),
       // 记录世界 id：删除书籍时按它清理对应的 character-cache 目录。
       worldId: world?.id ?? null,
@@ -99,6 +102,9 @@ export class LibraryStore {
     };
     try {
       await atomicWrite(this.path(id, "chapters.json"), JSON.stringify(source.chapters));
+      if (chapterIndex.length) {
+        await atomicWrite(this.path(id, "chapter-index.json"), JSON.stringify(chapterIndex));
+      }
       await atomicWrite(
         this.path(id, "world.json"),
         JSON.stringify({ world, initialState }, null, 2),
@@ -168,6 +174,45 @@ export class LibraryStore {
       JSON.stringify({ world, initialState }, null, 2),
     );
     this.sizeCache.delete(id);
+  }
+
+  // 无原文世界导入时落盘的章节目录：补挂原文用它比对「同一本书」。
+  // 旧版导入的书没有这份文件，返回空数组——补挂退化为无法核对，由调用方
+  // 按警示放行，不能在这里假装核对过。
+  async loadChapterIndex(id) {
+    try {
+      const raw = JSON.parse(await readFile(this.path(id, "chapter-index.json"), "utf8"));
+      return Array.isArray(raw) ? raw : [];
+    } catch {
+      return [];
+    }
+  }
+
+  // 补挂原文：往无原文的书位写进章节、摘掉 sourceless。世界档案原样不动——
+  // 这是补挂的全部意义（分享来的演绎不重烧）。meta.chapterCount 修成真实
+  // 章数；采样粗读徽标按世界档案自身的 coarse 口径补齐（与 add 同参，补读
+  // 入口据此亮灯）。目录文件功成身退：chapters.json 本身就带着标题。
+  async attachSource(id, chapters, world = null) {
+    assertBookId(id);
+    if (!Array.isArray(chapters) || !chapters.length) throw new Error("没有可补挂的章节");
+    const meta = JSON.parse(await readFile(this.path(id, "meta.json"), "utf8"));
+    const current = JSON.parse(await readFile(this.path(id, "chapters.json"), "utf8"));
+    if (Array.isArray(current) && current.length) throw new Error("这本书已有原文，无需补挂");
+    await atomicWrite(this.path(id, "chapters.json"), JSON.stringify(chapters));
+    delete meta.sourceless;
+    meta.chapterCount = chapters.length;
+    meta.attachedAt = new Date().toISOString();
+    if (world?.coarse?.sampled) {
+      meta.coarse = {
+        sampled: true,
+        groupsRead: world.coarse.groupsRead ?? 0,
+        groupsTotal: world.coarse.groupsTotal ?? 0,
+      };
+    }
+    await atomicWrite(this.path(id, "meta.json"), JSON.stringify(meta, null, 2));
+    await rm(this.path(id, "chapter-index.json"), { force: true }).catch(() => {});
+    this.sizeCache.delete(id);
+    return meta;
   }
 
   async usage() {

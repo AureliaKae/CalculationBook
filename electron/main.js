@@ -56,6 +56,7 @@ import {
   StoryEngine,
   worldviewForCheck,
   parseNovel,
+  matchSourceToIndex,
   BakeLimiter,
   WORLD_BUNDLE_EXTENSION,
   buildWorldBundle,
@@ -1153,13 +1154,14 @@ ipcMain.handle("library:export-world", async (event, { bookId, withSource } = {}
 });
 
 // 落库一个已解析的世界：书册三文件 → 正典摘要归位 → 人物精读缓存归位。
-// 轻装档 chapters 为空数组占位（library.load 对它是硬依赖），meta 标 sourceless。
+// 轻装档 chapters 为空数组占位（library.load 对它是硬依赖），meta 标 sourceless；
+// 章节目录随书落盘 chapter-index.json——补挂原文时它是「同一本书」的比对基准。
 async function commitWorldImport(parsed, title) {
   const meta = parsed.manifest.meta;
   await library.add({
     world: parsed.world,
     initialState: parsed.initialState,
-    source: { title, format: meta.format, chapters: parsed.chapters },
+    source: { title, format: meta.format, chapters: parsed.chapters, chapterIndex: parsed.chapterIndex },
     sourceless: parsed.chapters.length === 0,
   });
   // 摘要日志按「书名+全文」哈希归位，只有原名导入才对得上；改名导入时宁可不带
@@ -1247,6 +1249,102 @@ ipcMain.handle("library:import-world-confirm", async (event, { action, newTitle 
   if (action === "overwrite") await removeBookFromShelf(id);
   await commitWorldImport(parsed, title);
   return { status: "imported", title, ...worldImportSummary(parsed) };
+});
+
+// —— 补挂原文（轻装档导入后的满血通道）——
+// 读者自有原著（txt/epub）：按档案自带的章节目录比对「同一本书」，比对过才
+// 落库；落库后重跑一遍定向粗读（coarseOnly：只烧摘要日志，不重建世界档案），
+// 正典账本、文风范本、人物精读随 chapters 就位全部自动恢复。钱由读者付、
+// 版本由目录把关、世界档案原样保留——这就是轻装档分享的完整闭环。
+let pendingAttach = null;
+
+ipcMain.handle("library:attach-source", async (event, { bookId } = {}) => {
+  if (!trustedSender(event)) throw new Error("拒绝来自未知来源的调用");
+  if (typeof bookId !== "string" || !bookId) throw new Error("请先选择一本书");
+  assertBookId(bookId);
+  const book = await library.load(bookId);
+  if (Array.isArray(book.chapters) && book.chapters.length) {
+    throw new Error("这本书已有原文，无需补挂");
+  }
+  if (!book.meta?.sourceless) throw new Error("只有无原文的导入世界才需要补挂原文");
+  const result = await dialog.showOpenDialog(window, {
+    properties: ["openFile"],
+    filters: [{ name: "小说", extensions: ["txt", "epub"] }],
+  });
+  if (result.canceled || !result.filePaths?.length) return { status: "canceled" };
+  const path = result.filePaths[0];
+  const info = await stat(path);
+  if (info.size > 512 * 1024 * 1024) throw new Error("文件超过 512MB 上限，请先精简后重试");
+  const novel = await parseNovel({
+    name: path.split(/[\\/]/).at(-1),
+    buffer: await readFile(path),
+  });
+  novel.filePath = path;
+  // 摘要日志的缓存键 = sha1(书名 + 全部正文)：必须用书架 meta 的书名（账本
+  // 加载侧 loadCanonLedger 用的就是它），文件名推导的书名只配进警告。
+  const titleFromFileName = novel.title;
+  novel.title = book.meta.title;
+  const chapterIndex = await library.loadChapterIndex(bookId);
+  const match = chapterIndex.length
+    ? matchSourceToIndex({ chapters: novel.chapters, chapterIndex })
+    : { countIndex: 0, countParsed: novel.chapters.length, matched: 0, ratio: 0, verdict: "unverified" };
+  if (match.verdict === "mismatch") {
+    throw new Error(
+      `这份原文与档案目录对不上（档案 ${match.countIndex} 章、原文 ${match.countParsed} 章、标题仅对上 ${match.matched} 个），` +
+        "不能确定是同一本书。请确认选的是同版本原著，或换一份更完整的文件。",
+    );
+  }
+  const characters = novel.chapters.reduce((total, item) => total + item.text.length, 0);
+  pendingAttach = { bookId, novel };
+  return {
+    status: "confirm",
+    bookId,
+    bookTitle: book.meta.title,
+    parsedTitle: titleFromFileName,
+    format: novel.format,
+    chapterCount: novel.chapters.length,
+    indexChapterCount: chapterIndex.length || null,
+    matched: match.matched,
+    ratio: match.ratio,
+    verdict: match.verdict,
+    characters,
+    estimatedInputTokens: estimateBakeInputTokens(characters),
+    warnings: [
+      ...(novel.warnings ?? []),
+      ...(titleFromFileName !== book.meta.title
+        ? [`文件名看是《${titleFromFileName}》，与书架标题不同——已按书架标题对齐粗读缓存`]
+        : []),
+    ],
+  };
+});
+
+ipcMain.handle("library:attach-source-confirm", async (event, { action } = {}) => {
+  if (!trustedSender(event)) throw new Error("拒绝来自未知来源的调用");
+  if (!pendingAttach) throw new Error("没有待确认的补挂");
+  const { bookId, novel } = pendingAttach;
+  if (action !== "attach") {
+    pendingAttach = null;
+    return { status: "canceled" };
+  }
+  pendingAttach = null;
+  // 下架竞态：确认前书被移走就别挂了（挂进幽灵书位只会变成孤儿目录）。
+  const book = await library.load(bookId);
+  const scope = book.world?.creationScope ?? {};
+  const meta = await library.attachSource(bookId, novel.chapters, book.world);
+  const job = {
+    id: randomUUID(),
+    coarseOnly: true,
+    bookId,
+    novel,
+    title: meta.title,
+    // 采样窗口按档案记录的切入章重演：与导出方烧制时的选批口径一致。
+    focusChapter: Number.isInteger(scope.focusChapter) ? scope.focusChapter : 1,
+    controller: new AbortController(),
+  };
+  bakeQueue.push(job);
+  const queued = runningJobs.size >= MAX_CONCURRENT_BAKES;
+  drainBakeQueue();
+  return { status: "attached", jobId: job.id, bookTitle: meta.title, queued, ...bakeSnapshot() };
 });
 
 // 跨世编年史（拍板 2026-08-19）：世界跨世延续的可读呈现——历世生死、改命
@@ -1781,6 +1879,8 @@ async function runBakeJob(job) {
     anchorTime: job.anchorTime,
     // 采样粗读预算:缺省=全本。补读(library:coarse-topup)不传预算,即烧满全书。
     coarseBudgetChars: job.coarseBudgetChars,
+    // 定向粗读(补挂原文):只烧摘要日志,不产出世界。
+    coarseOnly: Boolean(job.coarseOnly),
     onProgress: (progress) => {
       if (progress.stage !== "coarse") {
         coarseSamples.length = 0;
@@ -1801,6 +1901,11 @@ async function runBakeJob(job) {
   });
   // 书在烧制途中被下架：abort 没赶上生成收尾时，结果直接丢弃，不许写回书架。
   if (job.cancelled) return null;
+  // 定向粗读不写回书架：世界档案来自导入、原样在架，这里只烧了摘要日志。
+  // 返回既有 bookId 的伪 meta，完成事件据此走 HUD 常规收口。
+  if (baked?.coarseOnly) {
+    return { id: job.bookId, title: job.title, degraded: null, coarse: null, coarseOnly: true };
+  }
   const meta = await library.add({ ...baked });
   return meta;
 }
@@ -1843,6 +1948,9 @@ async function runBakeJobLifecycle(job) {
         openAll: Boolean(job.openAll),
         anchorTime: job.anchorTime,
         ...(job.coarseBudgetChars ? { coarseBudgetChars: job.coarseBudgetChars } : {}),
+        // 定向粗读的失败任务必须原样重试：丢了这两个标记，重试会退化成完整
+        // 起稿并 library.add 覆盖导入的世界档案——那是灾难性的静默降级。
+        ...(job.coarseOnly ? { coarseOnly: true, bookId: job.bookId } : {}),
         filePath: job.novel?.filePath ?? null,
         // 没有路径可依赖时才保留已解析的小说（正常导入路径都有 filePath）。
         novel: job.novel?.filePath ? undefined : job.novel,
@@ -1907,7 +2015,7 @@ ipcMain.handle("novel:bake-retry", async (event, { jobId } = {}) => {
   failedJob = undefined;
   await clearPersistedFailedJob();
   if (!job.novel) {
-    if (!job.filePath) throw new Error("这次起稿已经无法重试，请重新导入");
+    if (!job.filePath) throw new Error("这次起稿已经无法重试，请重新导入这本书");
     // 重试时按路径重新读文件：内存里不养整本小说。
     try {
       job.novel = await parseNovel({
@@ -1916,6 +2024,16 @@ ipcMain.handle("novel:bake-retry", async (event, { jobId } = {}) => {
       });
     } catch {
       throw new Error("原文件已经读不到了，请重新导入这本书");
+    }
+    // 定向粗读按路径重读会把书名重新推导成文件名——摘要缓存键立刻和账本
+    // 加载侧对不上，粗读白烧。按书架 meta 再对齐一次。
+    if (job.coarseOnly) {
+      try {
+        const book = await library.load(job.bookId);
+        job.novel.title = book.meta.title;
+      } catch {
+        throw new Error("这本书已不在书架上，无法重试补挂粗读");
+      }
     }
   }
   bakeQueue.push(job);

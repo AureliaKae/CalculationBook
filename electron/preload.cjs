@@ -28,6 +28,8 @@ contextBridge.exposeInMainWorld("calculationpaper", {
       ipcRenderer.invoke("library:export-world", { bookId, withSource }),
     importWorld: () => ipcRenderer.invoke("library:import-world"),
     importWorldConfirm: (value) => ipcRenderer.invoke("library:import-world-confirm", value),
+    attachSource: (bookId) => ipcRenderer.invoke("library:attach-source", { bookId }),
+    attachSourceConfirm: (value) => ipcRenderer.invoke("library:attach-source-confirm", value),
   },
   novel: {
     choose: () => ipcRenderer.invoke("novel:choose"),

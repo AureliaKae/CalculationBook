@@ -21,6 +21,7 @@ export { buildCanonLedger } from "./canon-ledger.js";
 export { EntityStateTracker } from "./entity-state-tracker.js";
 export { StoryEngine, worldviewForCheck, divergenceTargetLabel } from "./engine.js";
 export { parseNovel } from "./novel-import.js";
+export { matchSourceToIndex, normalizeChapterTitle } from "./source-match.js";
 export { BakeLimiter } from "./bake-limiter.js";
 export { WORLD_BUNDLE_EXTENSION, buildWorldBundle, parseWorldBundle } from "./world-bundle.js";
 export { OpenAiCompatibleClient, fetchModels } from "./openai-client.js";
