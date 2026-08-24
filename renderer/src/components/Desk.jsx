@@ -24,6 +24,7 @@ export default function Desk({
   onExportBook,
   onImportWorld,
   onStudio,
+  onPlotting,
   theme,
   onTheme,
   note,
@@ -222,6 +223,9 @@ export default function Desk({
       <footer className="desk-toolbar">
         <p className="desk-note" aria-live="polite">{note}</p>
         <div className="desk-tools">
+          <button type="button" className="navbit" onClick={onPlotting} title="作家构思工作台：从一句话点子谋一篇新小说">
+            谋篇
+          </button>
           <button type="button" className="navbit" onClick={onImportWorld}>
             导入世界
           </button>

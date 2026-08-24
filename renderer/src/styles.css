@@ -3121,3 +3121,779 @@ option {
     animation: none !important;
   }
 }
+
+/* ============================================================
+   谋篇：作家构思工作台（2026-08-24）
+   ============================================================ */
+.plot {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+.plot-locknote-btn {
+  margin-left: 0.7rem;
+}
+
+.plot-body {
+  flex: 1;
+  width: min(62rem, 100%);
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: 13rem 1fr;
+  gap: 0 2.2rem;
+  padding: 2rem clamp(1rem, 3vw, 2.5rem) 3rem;
+}
+
+.plot-catalog {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  align-self: start;
+  position: sticky;
+  top: 4.6rem;
+  background: var(--fi-surface);
+  border: var(--fi-border);
+  border-radius: var(--fi-radius-md);
+  padding: 0.5rem;
+}
+
+.plot-new {
+  appearance: none;
+  font: inherit;
+  background: var(--fi-butter);
+  border: var(--fi-border);
+  border-radius: var(--fi-radius-md);
+  padding: 0.65rem 0.9rem;
+  cursor: pointer;
+  display: flex;
+  align-items: baseline;
+  gap: 0.45rem;
+  color: var(--fi-text);
+  transition: transform 0.16s var(--fi-ease-spring);
+}
+
+.plot-new:hover {
+  transform: translateY(-1px);
+}
+
+.plot-new-plus {
+  font-family: var(--fi-display);
+  font-weight: 700;
+}
+
+.plot-new-label {
+  font-size: 0.88rem;
+  font-weight: 700;
+}
+
+.plot-item {
+  appearance: none;
+  font: inherit;
+  text-align: left;
+  background: var(--fi-surface);
+  border: var(--fi-border);
+  border-radius: var(--fi-radius-md);
+  padding: 0.6rem 0.9rem;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 0.12rem;
+  color: var(--fi-soft);
+  transition: background-color 0.16s ease, color 0.16s ease, transform 0.16s var(--fi-ease-spring);
+}
+
+.plot-item:hover {
+  color: var(--fi-text);
+  transform: translateX(2px);
+}
+
+.plot-item.cur {
+  background: var(--fi-butter);
+  color: var(--fi-text);
+}
+
+.plot-item-title {
+  font-family: var(--fi-display);
+  font-weight: 700;
+  font-size: 0.94rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.plot-item-note {
+  font-size: 0.72rem;
+  color: var(--fi-faint);
+}
+
+.plot-catalog-empty {
+  font-size: 0.75rem;
+  color: var(--fi-faint);
+  padding: 0.4rem 0.5rem;
+}
+
+.plot-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  min-width: 0;
+}
+
+.plot-empty {
+  background: var(--fi-surface);
+  border: var(--fi-border);
+  border-radius: var(--fi-radius-md);
+  padding: 3.2rem 2rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.8rem;
+  text-align: center;
+}
+
+.plot-empty-main {
+  font-family: var(--fi-display);
+  font-size: 1.4rem;
+  font-weight: 700;
+}
+
+.plot-empty-sub {
+  max-width: 26rem;
+  color: var(--fi-soft);
+  font-size: 0.9rem;
+  line-height: 1.7;
+}
+
+.plot-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.plot-title {
+  font-family: var(--fi-display);
+  font-size: 1.35rem;
+  font-weight: 700;
+}
+
+.plot-seeds {
+  font-size: 0.8rem;
+  color: var(--fi-faint);
+  margin-top: 0.25rem;
+  max-width: 34rem;
+}
+
+.plot-head-acts {
+  display: flex;
+  gap: 0.5rem;
+  flex-shrink: 0;
+}
+
+.plot-idea {
+  appearance: none;
+  font: inherit;
+  text-align: left;
+  width: 100%;
+  background: var(--fi-butter);
+  border: var(--fi-border);
+  border-radius: var(--fi-radius-md);
+  padding: 0.75rem 1rem;
+  cursor: pointer;
+  display: flex;
+  gap: 0.8rem;
+  align-items: baseline;
+}
+
+.plot-idea-l {
+  font-family: var(--fi-display);
+  font-weight: 700;
+  font-size: 0.85rem;
+  flex-shrink: 0;
+}
+
+.plot-idea-v {
+  color: var(--fi-soft);
+  font-size: 0.9rem;
+  line-height: 1.6;
+}
+
+.plot-idea-edit {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+/* 分节卡 */
+.plot-card {
+  background: var(--fi-surface);
+  border: var(--fi-border);
+  border-radius: var(--fi-radius-md);
+  padding: 1.25rem 1.3rem 1.15rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+}
+
+.plot-card.done {
+  border-color: var(--fi-outline);
+}
+
+.plot-card-head {
+  display: flex;
+  align-items: baseline;
+  gap: 0.8rem;
+}
+
+.plot-card-title {
+  font-family: var(--fi-display);
+  font-weight: 700;
+  font-size: 1.05rem;
+}
+
+.plot-card-dep {
+  font-size: 0.72rem;
+  color: var(--fi-faint);
+}
+
+.plot-card-state {
+  margin-left: auto;
+  font-size: 0.72rem;
+  color: var(--fi-faint);
+}
+
+.plot-card-state.ok {
+  color: var(--fi-success);
+}
+
+.plot-card-lock {
+  font-size: 0.82rem;
+  color: var(--fi-faint);
+}
+
+.plot-card-hint {
+  font-size: 0.75rem;
+  color: var(--fi-faint);
+}
+
+.plot-card-acts {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin-top: 0.2rem;
+}
+
+.plot-reroll {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex: 1;
+  min-width: 16rem;
+}
+
+.plot-note-input {
+  flex: 1;
+  min-width: 10rem;
+  padding: 0.45rem 0.7rem;
+  font-size: 0.82rem;
+}
+
+.plot-prose {
+  color: var(--fi-text);
+  font-size: 0.92rem;
+  line-height: 1.75;
+  white-space: pre-wrap;
+}
+
+.plot-notes {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  padding: 0;
+  margin: 0;
+}
+
+.plot-notes li {
+  position: relative;
+  padding-left: 1.05rem;
+  font-size: 0.86rem;
+  line-height: 1.6;
+  color: var(--fi-soft);
+}
+
+.plot-notes li::before {
+  content: "·";
+  position: absolute;
+  left: 0.3rem;
+  font-weight: 700;
+  color: var(--fi-faint);
+}
+
+.plot-notes.plain li {
+  padding-left: 1.05rem;
+}
+
+.plot-beat-note {
+  color: var(--fi-faint);
+}
+
+.plot-show {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.plot-show-l {
+  font-size: 0.72rem;
+  color: var(--fi-faint);
+}
+
+.plot-show-v {
+  margin: 0;
+  font-size: 0.88rem;
+  line-height: 1.65;
+  color: var(--fi-text);
+}
+
+.plot-style-view {
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+}
+
+.plot-source {
+  margin: 0;
+  font-size: 0.75rem;
+  color: var(--fi-faint);
+}
+
+.plot-person {
+  border: var(--fi-border);
+  border-radius: var(--fi-radius-md);
+  padding: 0.9rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.plot-person.edit {
+  gap: 0.45rem;
+}
+
+.plot-person-name {
+  margin: 0;
+  font-family: var(--fi-display);
+  font-weight: 700;
+  font-size: 0.98rem;
+  display: flex;
+  align-items: baseline;
+  gap: 0.6rem;
+}
+
+.plot-person-role {
+  font-size: 0.75rem;
+  font-weight: 400;
+  color: var(--fi-faint);
+}
+
+.plot-person-head {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.plot-person-head .pen-input {
+  flex: 1;
+  min-width: 0;
+  padding: 0.45rem 0.7rem;
+  font-size: 0.85rem;
+}
+
+.plot-name-input {
+  flex: 0 0 8rem !important;
+}
+
+.plot-volume {
+  border: var(--fi-border);
+  border-radius: var(--fi-radius-md);
+  padding: 0.9rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+
+.plot-volume.edit {
+  gap: 0.45rem;
+}
+
+.plot-volume-title {
+  margin: 0;
+  font-family: var(--fi-display);
+  font-weight: 700;
+  font-size: 0.95rem;
+}
+
+.plot-beat-row {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.plot-beat-row .pen-input {
+  flex: 1;
+  min-width: 0;
+  padding: 0.4rem 0.65rem;
+  font-size: 0.82rem;
+}
+
+.plot-edit {
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+}
+
+.plot-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.plot-field-l {
+  font-size: 0.75rem;
+  color: var(--fi-faint);
+}
+
+.plot-field .pen-input {
+  width: 100%;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.88rem;
+}
+
+.plot-area {
+  resize: vertical;
+  line-height: 1.65;
+  font-family: inherit;
+}
+
+.plot-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+}
+
+.plot-sample-live {
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+  align-items: flex-start;
+}
+
+.plot-stream {
+  margin: 0;
+  color: var(--fi-soft);
+  font-size: 0.92rem;
+  line-height: 1.8;
+  white-space: pre-wrap;
+  min-height: 3rem;
+}
+
+.plot-sample-text {
+  padding: 0.2rem 0;
+}
+
+.plot-ref-row {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.plot-ref-row .pen-input {
+  flex: 1;
+  min-width: 0;
+}
+
+.plot-ref-digest {
+  margin: 0;
+  font-size: 0.75rem;
+  color: var(--fi-faint);
+  line-height: 1.6;
+}
+
+/* 新建向导比导入弹窗宽一档（12 枚题材芯片需要横向余地）；frame 撑满外壳，
+   不再自设宽度——子比父宽会顶出横向滚动条（真机反馈 2026-08-24）。 */
+.plot-new-dialog {
+  max-width: min(30rem, calc(100vw - 2.5rem));
+}
+
+/* 向导开篇说明：讲清「点子」是什么、之后各节如何从它长出来 */
+.plot-wizard-note {
+  margin: 0;
+  font-size: 0.78rem;
+  line-height: 1.7;
+  color: var(--fi-faint);
+}
+
+/* 向导第一步：两条起步路径 */
+.plot-paths {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.9rem;
+}
+
+.plot-path {
+  appearance: none;
+  font: inherit;
+  text-align: left;
+  background: var(--fi-bg);
+  border: var(--fi-border);
+  border-radius: var(--fi-radius-md);
+  padding: 1.2rem 1.1rem;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  color: var(--fi-text);
+  transition: transform 0.16s var(--fi-ease-spring), background-color 0.16s ease;
+}
+
+.plot-path:hover {
+  transform: translateY(-2px);
+  background: var(--fi-butter);
+}
+
+.plot-path-title {
+  font-family: var(--fi-display);
+  font-weight: 700;
+  font-size: 1.15rem;
+}
+
+.plot-path-sub {
+  font-size: 0.8rem;
+  color: var(--fi-faint);
+}
+
+/* 帮我想：一批六张灵感卡 */
+/* 创新度杠杆：成熟 ⟷ 创新，五档 */
+.plot-flavor {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  background: var(--fi-surface);
+  border: var(--fi-border);
+  border-radius: var(--fi-radius-md);
+  padding: 0.55rem 0.9rem;
+}
+
+.plot-flavor.bare {
+  background: none;
+  border: none;
+  padding: 0;
+}
+
+.plot-flavor-l {
+  font-family: var(--fi-display);
+  font-weight: 700;
+  font-size: 0.85rem;
+  flex-shrink: 0;
+}
+
+.plot-flavor-end {
+  font-size: 0.72rem;
+  color: var(--fi-faint);
+  flex-shrink: 0;
+}
+
+.plot-flavor input[type="range"] {
+  flex: 1;
+  min-width: 5rem;
+  accent-color: var(--fi-text);
+  cursor: pointer;
+}
+
+.plot-flavor-cur {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--fi-soft);
+  flex-shrink: 0;
+  min-width: 3.4em;
+  text-align: right;
+}
+
+.plot-cards {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.55rem;
+}
+
+.plot-idea-card {
+  appearance: none;
+  font: inherit;
+  text-align: left;
+  background: var(--fi-bg);
+  border: var(--fi-border);
+  border-radius: var(--fi-radius-md);
+  padding: 0.75rem 0.85rem;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  color: var(--fi-text);
+  transition: transform 0.16s var(--fi-ease-spring), background-color 0.16s ease;
+}
+
+.plot-idea-card:hover {
+  transform: translateY(-2px);
+  background: var(--fi-butter);
+}
+
+.plot-idea-genre {
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: var(--fi-faint);
+}
+
+.plot-idea-text {
+  font-size: 0.85rem;
+  line-height: 1.6;
+}
+
+.plot-idea-hook {
+  font-size: 0.73rem;
+  line-height: 1.5;
+  color: var(--fi-faint);
+}
+
+.plot-new-dialog .imp-frame {
+  width: 100%;
+  max-height: calc(100vh - 4rem);
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+}
+
+.plot-rename-dialog .imp-frame {
+  width: min(22rem, 90vw);
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+}
+
+@media (max-width: 56rem) {
+  .plot-body {
+    grid-template-columns: 1fr;
+  }
+
+  .plot-catalog {
+    position: static;
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+
+  .plot-new-label {
+    display: none;
+  }
+
+  .plot-item {
+    flex: 1 1 auto;
+  }
+
+  .plot-head {
+    flex-direction: column;
+  }
+}
+
+/* ============================================================
+   开门：居中双模式选择（2026-08-24）
+   ============================================================ */
+.gate {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+.gate-body {
+  flex: 1;
+  width: min(46rem, 100%);
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2rem;
+  padding: 2rem clamp(1rem, 3vw, 2.5rem) 4rem;
+}
+
+.gate-ask {
+  margin: 0;
+  font-family: var(--fi-display);
+  font-weight: 700;
+  font-size: 1.5rem;
+}
+
+.gate-cards {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1.3rem;
+  width: 100%;
+}
+
+.gate-card {
+  appearance: none;
+  font: inherit;
+  text-align: left;
+  background: var(--fi-surface);
+  border: var(--fi-border-hero);
+  border-radius: var(--fi-radius-lg);
+  padding: 1.7rem 1.6rem 1.5rem;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  color: var(--fi-text);
+  transition: transform 0.16s var(--fi-ease-spring), background-color 0.16s ease;
+}
+
+.gate-card:hover {
+  transform: translateY(-3px);
+  background: var(--fi-butter);
+}
+
+.gate-card:active {
+  transform: translateY(-1px);
+}
+
+.gate-card-badge {
+  font-family: var(--fi-display);
+  font-weight: 700;
+  font-size: 0.8rem;
+  color: var(--fi-faint);
+  letter-spacing: 0.2em;
+}
+
+.gate-card-title {
+  font-family: var(--fi-display);
+  font-weight: 700;
+  font-size: 1.45rem;
+}
+
+.gate-card-line {
+  font-size: 0.88rem;
+  line-height: 1.65;
+  color: var(--fi-soft);
+}
+
+.gate-card-hint {
+  margin-top: 0.5rem;
+  font-size: 0.75rem;
+  color: var(--fi-faint);
+}
+
+@media (max-width: 40rem) {
+  .gate-cards {
+    grid-template-columns: 1fr;
+  }
+}

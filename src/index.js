@@ -32,5 +32,24 @@ export { clientConfig, publicSettings, resolveBakeConcurrency } from "./settings
 export { isKnownProviderBaseUrl } from "./providers.js";
 export { searchBookReference } from "./web-search.js";
 export { genreSearchKeywords, genreVocabulary, guessGenreByKeywords } from "./genre.js";
+export {
+  PLOT_SECTIONS,
+  PLOT_SECTION_KEYS,
+  newPlotProject,
+  normalizeProject,
+  normalizeSection,
+  generatePremise,
+  generateWorldview,
+  proposeStyle,
+  analyzeStyleSample,
+  styleFromLibrary,
+  generateCharacters,
+  generateOutline,
+  generateSample,
+  generateIdeaCards,
+  normalizeIdeaCards,
+  normalizeFlavor,
+  projectToMarkdown,
+} from "./plotting.js";
 export { enterInteractive, exitInteractive, waitForInteractiveIdle } from "./request-priority.js";
 export { submitCatalogCoherenceTool, submitDigestMergeTool, submitRoleAbilitiesTool, submitSummaryMergeTool, submitSummaryVerifyTool, submitTimelineFactsTool, submitUpgradeWorldTool } from "./structured-tools.js";

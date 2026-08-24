@@ -451,3 +451,158 @@ export function submitTimelineFactsTool() {
     required: ["timeline"],
   });
 }
+
+/* ============ 谋篇（作家构思工作台） ============ */
+
+// 文风卡沿用烧制侧的 submit_style（七维同形：AI 提议/贴范文/案头书三通道可互换）。
+
+// 灵感卡（帮我想通道）：没方向的作家一次收一批思路，选中即作为点子种子。
+export function submitPlotIdeasTool() {
+  return tool("submit_plot_ideas", "提交一批小说灵感卡：每张一句话点子＋题材＋一句卖点。", {
+    type: "object",
+    properties: {
+      cards: {
+        type: "array",
+        minItems: 6,
+        maxItems: 6,
+        items: {
+          type: "object",
+          properties: {
+            idea: { type: "string", description: "一句话点子（20-50 字），要能长成长篇。" },
+            genre: { type: "string", description: "题材，取自给定枚举。" },
+            hook: { type: "string", description: "一句卖点：这本书最抓人的地方。" },
+          },
+          required: ["idea", "genre", "hook"],
+        },
+      },
+    },
+    required: ["cards"],
+  });
+}
+
+export function submitPlotPremiseTool() {
+  return tool("submit_plot_premise", "提交小说立意构思：立意、主题、钩子、备选书名与思路要点。", {
+    type: "object",
+    properties: {
+      logline: { type: "string", description: "一句话立意（30-60 字）：主角、核心冲突与赌注。" },
+      theme: { type: "string", description: "主题一两句：这本书想说什么，落在具体的人身上。" },
+      hook: { type: "string", description: "开篇钩子：第一个抓人的冲突或悬念，一句场景化描述。" },
+      titles: {
+        type: "array",
+        minItems: 3,
+        maxItems: 3,
+        items: { type: "string" },
+        description: "3 个备选书名，长短错落。",
+      },
+      notes: {
+        type: "array",
+        minItems: 3,
+        maxItems: 5,
+        items: { type: "string" },
+        description: "3-5 条创作思路要点：差异化卖点、可展开的矛盾、避坑提醒。",
+      },
+    },
+    required: ["logline", "theme", "hook", "titles", "notes"],
+  });
+}
+
+export function submitPlotWorldviewTool() {
+  return tool("submit_plot_worldview", "提交世界观设定：总述、设定要点与核心矛盾。", {
+    type: "object",
+    properties: {
+      summary: { type: "string", description: "世界观总述（200-400 字）。" },
+      highlights: {
+        type: "array",
+        minItems: 4,
+        maxItems: 8,
+        items: { type: "string" },
+        description: "4-8 条设定要点，每条一句，具体可感。",
+      },
+      conflicts: {
+        type: "array",
+        minItems: 2,
+        maxItems: 4,
+        items: { type: "string" },
+        description: "2-4 条核心矛盾：世界里天然对立的力量/阶层/观念。",
+      },
+    },
+    required: ["summary", "highlights", "conflicts"],
+  });
+}
+
+export function submitPlotCharactersTool() {
+  const lineList = (label, maxItems) => ({
+    type: "array",
+    maxItems,
+    items: { type: "string" },
+    description: `${label}，每条一句。`,
+  });
+  return tool("submit_plot_characters", "提交核心人物雏形卡（3-5 位，含 persona 四卡与人物弧线）。", {
+    type: "object",
+    properties: {
+      characters: {
+        type: "array",
+        minItems: 3,
+        maxItems: 5,
+        items: {
+          type: "object",
+          properties: {
+            name: { type: "string", description: "人物名。" },
+            role: { type: "string", description: "身份一句话。" },
+            summary: { type: "string", description: "处境与来历，一两句。" },
+            persona: {
+              type: "object",
+              properties: {
+                temperament: { type: "string", description: "性格一句：行为倾向，不贴标签。" },
+                motives: lineList("动机 2-3 条，具体可演", 3),
+                bottomLines: lineList("底线 1-2 条：绝不做的事", 2),
+                manner: { type: "string", description: "说话方式一句：语气、口癖、词面习惯。" },
+              },
+              required: ["temperament", "manner"],
+            },
+            arc: { type: "string", description: "一句话人物弧线：从什么人变成什么人，因什么而变。" },
+          },
+          required: ["name", "role", "summary", "persona"],
+        },
+      },
+    },
+    required: ["characters"],
+  });
+}
+
+export function submitPlotOutlineTool() {
+  return tool("submit_plot_outline", "提交故事大纲：总纲与分卷（每卷含拍点）。", {
+    type: "object",
+    properties: {
+      logline: { type: "string", description: "总纲一句话：整个故事从什么局面走到什么局面。" },
+      volumes: {
+        type: "array",
+        minItems: 2,
+        maxItems: 5,
+        items: {
+          type: "object",
+          properties: {
+            title: { type: "string", description: "卷名。" },
+            summary: { type: "string", description: "本卷局面与主要事件（80-150 字）。" },
+            beats: {
+              type: "array",
+              minItems: 5,
+              maxItems: 8,
+              items: {
+                type: "object",
+                properties: {
+                  title: { type: "string", description: "拍点一句：局面变化。" },
+                  note: { type: "string", description: "这一拍具体发生什么、付出什么代价。" },
+                },
+                required: ["title"],
+              },
+              description: "5-8 个拍点。",
+            },
+          },
+          required: ["title", "summary", "beats"],
+        },
+      },
+    },
+    required: ["logline", "volumes"],
+  });
+}

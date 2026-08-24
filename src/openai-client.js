@@ -353,6 +353,20 @@ export class OpenAiCompatibleClient {
     return this.#functionOrFallback(messages, submitDraftTool(), { timeoutMs });
   }
 
+  // 谋篇样章（2026-08-24）：纯文本流式——与回合叙事同一条 #streamPlain 通道，
+  // 消息由谋篇层给定、恒走强槽；onNarrative 不传时回落实例默认（谋篇侧把
+  // 默认接到 plot:chunk 频道）。
+  async generatePlotSample({ messages, onNarrative, signal, timeoutMs }) {
+    const { narrative } = await this.#streamPlain({
+      endpoint: this.config.strong,
+      messages,
+      onNarrative: onNarrative ?? this.onNarrative,
+      signal,
+      timeoutMs: timeoutMs ?? this.config.strongTimeoutMs,
+    });
+    return narrative;
+  }
+
   async generateOpening({ world, state, successor = false, styleSamples = [], pastLifeFacts = [], rewriteNote = "" }) {
     const messages = buildOpeningMessages({ world, state, successor, styleSamples, pastLifeFacts, rewriteNote });
     const result = await this.#functionOrFallback(messages, submitOpeningTool(), {

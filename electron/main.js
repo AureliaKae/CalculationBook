@@ -1,4 +1,4 @@
-import { app, BrowserWindow, dialog, ipcMain, Menu, safeStorage } from "electron";
+import { app, BrowserWindow, dialog, ipcMain, Menu, safeStorage, screen } from "electron";
 import { createHash, randomUUID } from "node:crypto";
 import { mkdir, open, readdir, readFile, rename, rm, stat, writeFile } from "node:fs/promises";
 import { join } from "node:path";
@@ -74,6 +74,20 @@ import {
   resolveBakeConcurrency,
   isKnownProviderBaseUrl,
   searchBookReference,
+  PLOT_SECTIONS,
+  generatePremise,
+  generateWorldview,
+  proposeStyle,
+  analyzeStyleSample,
+  styleFromLibrary,
+  generateCharacters,
+  generateOutline,
+  generateSample,
+  generateIdeaCards,
+  normalizeIdeaCards,
+  normalizeSection,
+  normalizeFlavor,
+  projectToMarkdown,
   genreSearchKeywords,
   enterInteractive,
   exitInteractive,
@@ -87,6 +101,7 @@ import {
   submitUpgradeWorldTool,
 } from "../src/index.js";
 import { assertBookId, bookId as bookIdFor, LibraryStore } from "./library-store.js";
+import { PlotStore } from "./plot-store.js";
 import { SettingsStore } from "./settings-store.js";
 import { UsageStore } from "./usage-store.js";
 import { isPrivateOrReservedHost } from "./net-guard.js";
@@ -127,6 +142,7 @@ let settingsStore;
 let progressStore;
 let usageStore;
 let library;
+let plotStore;
 let engine;
 let currentOptions = [];
 // 意图先行(拍板 R3,2026-08-18 更新:落定即清):玩家声明的方向只服务于
@@ -669,11 +685,15 @@ function fallbackOpening(gameWorld, gameState, successor = false) {
 
 async function createWindow() {
   closeApproved = false;
+  // 窗口不超出屏幕工作区（2026-08-24）：高 DPI 笔记本在 Windows 125%/150%
+  // 缩放下逻辑分辨率可能只有 1280×720——固定 1240×860 会比屏幕还高，
+  // 整个界面显得巨大。按主屏工作区钳制，留 24px 呼吸边。
+  const workArea = screen.getPrimaryDisplay().workArea;
   const created = new BrowserWindow({
-    width: 1240,
-    height: 860,
-    minWidth: 900,
-    minHeight: 640,
+    width: Math.min(1240, workArea.width - 24),
+    height: Math.min(860, workArea.height - 24),
+    minWidth: Math.min(900, workArea.width - 24),
+    minHeight: Math.min(640, workArea.height - 24),
     frame: false,
     title: "推演书",
     backgroundColor: "#ffe9ce",
@@ -801,6 +821,7 @@ app.whenReady().then(async () => {
     }
   } catch {}
   library = new LibraryStore(join(userData, "books"));
+  plotStore = new PlotStore(join(userData, "plotting"));
   await createWindow().catch((error) => console.error("[window] 初始建窗失败：", error));
   // 全库身份能力补写:后台串行,不阻塞启动,也不抢烧制配额。
   void upgradeAllRoleAbilities().catch(() => {});
@@ -953,8 +974,12 @@ ipcMain.handle("settings:models", async (event, target = {}) => {
 // 用量账目（文房「账目」面板）：按书累计的输入/输出 token 与请求数 + 合计。
 ipcMain.handle("usage:get", async (event) => {
   if (!trustedSender(event)) throw new Error("拒绝来自未知来源的调用");
-  const books = await library.list();
-  return usageStore.view(new Map(books.map((book) => [book.id, book.title])));
+  const [books, plots] = await Promise.all([library.list(), plotStore.list()]);
+  // 谋篇项目的用量按 projectId 归账，标题并入同一张账目表。
+  const titles = new Map(books.map((book) => [book.id, book.title]));
+  for (const plot of plots) titles.set(plot.id, `谋篇 · ${plot.title}`);
+  titles.set("plot-ideas", "谋篇 · 灵感");
+  return usageStore.view(titles);
 });
 
 ipcMain.handle("library:list", async (event) => {
@@ -2770,4 +2795,194 @@ ipcMain.handle("progress:resume", async (event, bookId) => {
   if (!saved) throw new Error("这本书没有可以接着读的进度");
   const ending = await restoreProgressSession(bookId, saved);
   return progressResumeView(bookId, saved, ending);
+});
+
+/* ============ 谋篇（作家构思工作台，2026-08-24） ============
+   与游玩完全解耦的独立面：项目存 plotting/，LLM 用量按 projectId 归账。
+   生成类请求走 interactive 门（不与烧制抢配额）；同一时刻只允许一节在生成，
+   防止并发写穿同一份 project.json。样章流式走 plot:chunk 频道（与 story:chunk
+   分家，互不串台）。 */
+
+// 谋篇专用的客户端装配：与 configuredClient 同一套配置，但叙事流接到
+// plot:chunk、用量记到项目自己的桶。
+async function plotClient(projectId) {
+  const settings = await settingsStore.load();
+  return new OpenAiCompatibleClient({
+    config: { ...clientConfig(settings), strongTimeoutMs: PLAY_TIMEOUT_MS },
+    onNarrative: (text) => safeSend("plot:chunk", text),
+    onUsage: (usage) => usageStore?.record(projectId ?? "", usage),
+  });
+}
+
+// 谋篇生成在飞锁与样章取消信号。
+let plotBusy = false;
+let plotSampleAbort = null;
+
+ipcMain.handle("plot:list", async (event) => {
+  if (!trustedSender(event)) throw new Error("拒绝来自未知来源的调用");
+  return plotStore.list();
+});
+
+ipcMain.handle("plot:create", async (event, { title, idea, genre, reference, flavor } = {}) => {
+  if (!trustedSender(event)) throw new Error("拒绝来自未知来源的调用");
+  return plotStore.create({ title, idea, genre, reference, flavor });
+});
+
+ipcMain.handle("plot:get", async (event, { projectId } = {}) => {
+  if (!trustedSender(event)) throw new Error("拒绝来自未知来源的调用");
+  const project = await plotStore.load(projectId ?? "");
+  if (!project) throw new Error("谋篇项目不存在");
+  return project;
+});
+
+ipcMain.handle("plot:rename", async (event, { projectId, title } = {}) => {
+  if (!trustedSender(event)) throw new Error("拒绝来自未知来源的调用");
+  return plotStore.rename(projectId ?? "", title);
+});
+
+ipcMain.handle("plot:remove", async (event, { projectId } = {}) => {
+  if (!trustedSender(event)) throw new Error("拒绝来自未知来源的调用");
+  await plotStore.remove(projectId ?? "");
+  // 用量清账与下架书同一纪律：项目没了，账目不留残行。
+  usageStore.removeBook(projectId ?? "");
+  return { ok: true };
+});
+
+// 手工编辑写回：按节归一后落库（normalizeSection 拒绝未知节与脏结构）。
+ipcMain.handle("plot:save-section", async (event, { projectId, section, value } = {}) => {
+  if (!trustedSender(event)) throw new Error("拒绝来自未知来源的调用");
+  if (plotBusy) throw new Error("这一节正在生成——稍候再编辑");
+  const project = await plotStore.load(projectId ?? "");
+  if (!project) throw new Error("谋篇项目不存在");
+  if (section === "seeds") {
+    // 种子里点子与创作度杠杆可改（题材与参考在建项时定下，改了等于另一个项目）；
+    // 只动其一时不强求另一个也在载荷里。
+    const nextSeeds = { ...project.seeds };
+    if (value?.idea !== undefined) {
+      const idea = String(value.idea ?? "").trim().slice(0, 300);
+      if (!idea) throw new Error("点子不能为空");
+      nextSeeds.idea = idea;
+    }
+    if (value?.flavor !== undefined) nextSeeds.flavor = normalizeFlavor(value.flavor);
+    project.seeds = nextSeeds;
+  } else {
+    project[section] = normalizeSection(section, value);
+  }
+  project.updatedAt = new Date().toISOString();
+  return plotStore.save(project);
+});
+
+// 分节生成。文风节带 channel（ai/sample/library）；样章节流式（plot:chunk）。
+ipcMain.handle(
+  "plot:generate",
+  async (event, { projectId, section, note = "", channel = "ai", sampleText = "", bookId = "" } = {}) => {
+    if (!trustedSender(event)) throw new Error("拒绝来自未知来源的调用");
+    if (plotBusy) throw new Error("上一节还在生成——稍候");
+    const meta = PLOT_SECTIONS.find((item) => item.key === section);
+    if (!meta) throw new Error(`未知的谋篇节 “${section}”`);
+    const project = await plotStore.load(projectId ?? "");
+    if (!project) throw new Error("谋篇项目不存在");
+    // 上游检查：缺哪节先补哪节，界面按 requires 预先禁点，这里是硬闸。
+    for (const required of meta.requires) {
+      if (!project[required]) {
+        const label = PLOT_SECTIONS.find((item) => item.key === required)?.label ?? required;
+        throw new Error(`先完成「${label}」，再生成「${meta.label}」`);
+      }
+    }
+    // 文风 · 案头书通道零 LLM：不建客户端、不进 interactive 门。
+    if (section === "style" && channel === "library") {
+      const styles = await library.styles();
+      const hit = styles.find((item) => item.id === bookId) ?? null;
+      if (!hit) throw new Error("案头没有这本书的文风档案（或书未起稿完成）");
+      const next = {
+        ...project,
+        style: styleFromLibrary(hit.title, hit.style),
+        updatedAt: new Date().toISOString(),
+      };
+      return plotStore.save(next);
+    }
+    const client = await plotClient(project.id);
+    enterInteractive();
+    plotBusy = true;
+    try {
+      let value;
+      if (section === "premise") value = await generatePremise(client, project, { note });
+      else if (section === "worldview") value = await generateWorldview(client, project, { note });
+      else if (section === "style") {
+        if (channel === "sample") value = await analyzeStyleSample(client, sampleText);
+        else value = await proposeStyle(client, project, { note });
+      } else if (section === "characters") value = await generateCharacters(client, project, { note });
+      else if (section === "outline") value = await generateOutline(client, project, { note });
+      else if (section === "sample") {
+        plotSampleAbort = new AbortController();
+        try {
+          value = await generateSample(client, project, { note, signal: plotSampleAbort.signal });
+        } finally {
+          plotSampleAbort = null;
+        }
+      }
+      if (!value) throw new Error("这一节没有生成出可用内容——换个说法再试一次");
+      const next = { ...project, [section]: value, updatedAt: new Date().toISOString() };
+      return plotStore.save(next);
+    } finally {
+      plotBusy = false;
+      plotSampleAbort = null;
+      exitInteractive();
+    }
+  },
+);
+
+ipcMain.handle("plot:sample-cancel", async (event) => {
+  if (!trustedSender(event)) throw new Error("拒绝来自未知来源的调用");
+  plotSampleAbort?.abort();
+  return { cancelled: true };
+});
+
+// 灵感卡（帮我想通道）：项目尚未创建，用量记入专属桶 plot-ideas。
+ipcMain.handle("plot:idea-cards", async (event, { genres = [], avoid = [], flavor = 3 } = {}) => {
+  if (!trustedSender(event)) throw new Error("拒绝来自未知来源的调用");
+  if (plotBusy) throw new Error("上一节还在生成——稍候");
+  const settings = await settingsStore.load();
+  const client = new OpenAiCompatibleClient({
+    config: { ...clientConfig(settings), strongTimeoutMs: PLAY_TIMEOUT_MS },
+    onUsage: (usage) => usageStore?.record("plot-ideas", usage),
+  });
+  enterInteractive();
+  try {
+    const cards = await generateIdeaCards(client, { genres, avoid, flavor });
+    if (!cards.length) throw new Error("这一批没有出可用的灵感——再试一次");
+    return { cards };
+  } finally {
+    exitInteractive();
+  }
+});
+
+// 参考作品搜索：复用起稿的公网资料源（维基/百度百科/DDG，只发书名）。
+ipcMain.handle("plot:search-reference", async (event, { name } = {}) => {
+  if (!trustedSender(event)) throw new Error("拒绝来自未知来源的调用");
+  const cleaned = String(name ?? "").trim().slice(0, 60);
+  if (!cleaned) throw new Error("先填一个参考作品名");
+  const digest = await searchBookReference({ title: cleaned });
+  return { name: cleaned, digest: digest.slice(0, 6000), found: Boolean(digest) };
+});
+
+ipcMain.handle("plot:library-styles", async (event) => {
+  if (!trustedSender(event)) throw new Error("拒绝来自未知来源的调用");
+  return library.styles();
+});
+
+// 谋篇导出：整档拼 Markdown 存盘（照 story:export 的保存对话框模式）。
+ipcMain.handle("plot:export", async (event, { projectId } = {}) => {
+  if (!trustedSender(event)) throw new Error("拒绝来自未知来源的调用");
+  const project = await plotStore.load(projectId ?? "");
+  if (!project) throw new Error("谋篇项目不存在");
+  const markdown = projectToMarkdown(project);
+  const safeTitle = String(project.title ?? "谋篇").replace(/[\\/:*?"<>|]/g, "_");
+  const result = await dialog.showSaveDialog(window, {
+    defaultPath: join(app.getPath("downloads"), `谋篇·${safeTitle}.md`),
+    filters: [{ name: "Markdown", extensions: ["md"] }],
+  });
+  if (result.canceled || !result.filePath) return { ok: false, canceled: true };
+  await writeFile(result.filePath, markdown, "utf8");
+  return { ok: true, path: result.filePath };
 });

@@ -222,4 +222,26 @@ export class LibraryStore {
       bytes: books.reduce((total, book) => total + book.bytes, 0),
     };
   }
+
+  // 谋篇「选案头书文风」用（2026-08-24）：轻读每本书的 world.json 只取
+  // style 与标题——不走 load()（那会把整本原文读进内存）。坏档静默跳过。
+  async styles() {
+    await mkdir(this.directory, { recursive: true });
+    const entries = await readdir(this.directory, { withFileTypes: true });
+    const styles = await Promise.all(
+      entries
+        .filter((entry) => entry.isDirectory() && /^[a-f0-9]{16}$/.test(entry.name))
+        .map(async (entry) => {
+          try {
+            const raw = JSON.parse(await readFile(this.path(entry.name, "world.json"), "utf8"));
+            const style = raw?.world?.style;
+            if (!style || typeof style !== "object") return null;
+            return { id: entry.name, title: raw?.world?.title ?? entry.name, style };
+          } catch {
+            return null;
+          }
+        }),
+    );
+    return styles.filter(Boolean);
+  }
 }

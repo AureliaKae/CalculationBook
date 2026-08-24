@@ -29,6 +29,7 @@ import {
   submitThreadsTool,
   submitWorldRepairTool,
 } from "./structured-tools.js";
+import { buildStyleAnalysisMessages } from "./style-prompt.js";
 
 function hashNovel(novel) {
   return createHash("sha256")
@@ -681,14 +682,7 @@ export class NovelBaker {
     const genre = checkpoint.genre ?? "其他";
     if (!coarseOnly && !checkpoint.style) {
       checkpoint.style = await call(
-        [
-          {
-            role: "system",
-            content:
-              "分析这本小说的写作风格，只返回 JSON，字段为 narration(人称与视角)、tense(时态)、sentence(句长与节奏)、punctuation(标点习惯)、imagery(常见意象数组)、diction(方言或专有词汇数组)、chapterForm(章节体例)、avoid(应当避免的写法数组)。",
-          },
-          { role: "user", content: styleSampleText(novel.chapters) },
-        ],
+        buildStyleAnalysisMessages(styleSampleText(novel.chapters)),
         { tool: submitStyleTool() },
       );
       await persistNovelMeta();

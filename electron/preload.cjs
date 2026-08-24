@@ -1,6 +1,12 @@
-const { contextBridge, ipcRenderer } = require("electron");
+const { contextBridge, ipcRenderer, webFrame } = require("electron");
 
 contextBridge.exposeInMainWorld("calculationpaper", {
+  // 界面缩放（2026-08-24）：Ctrl+滚轮 / Ctrl+=、-、0 由渲染层驱动，
+  // 系数经 localStorage 记忆（cp-zoom），下次启动恢复。
+  zoom: {
+    set: (factor) => webFrame.setZoomFactor(Number(factor) || 1),
+    get: () => webFrame.getZoomFactor(),
+  },
   window: {
     minimize: () => ipcRenderer.send("window:minimize"),
     toggle: () => ipcRenderer.send("window:toggle"),
@@ -88,5 +94,24 @@ contextBridge.exposeInMainWorld("calculationpaper", {
   world: {
     draftEntity: (value) => ipcRenderer.invoke("world:draft-entity", value),
     createEntity: (value) => ipcRenderer.invoke("world:create-entity", value),
+  },
+  plot: {
+    list: () => ipcRenderer.invoke("plot:list"),
+    create: (value) => ipcRenderer.invoke("plot:create", value),
+    get: (projectId) => ipcRenderer.invoke("plot:get", { projectId }),
+    rename: (projectId, title) => ipcRenderer.invoke("plot:rename", { projectId, title }),
+    remove: (projectId) => ipcRenderer.invoke("plot:remove", { projectId }),
+    saveSection: (value) => ipcRenderer.invoke("plot:save-section", value),
+    generate: (value) => ipcRenderer.invoke("plot:generate", value),
+    ideaCards: (value) => ipcRenderer.invoke("plot:idea-cards", value),
+    cancelSample: () => ipcRenderer.invoke("plot:sample-cancel"),
+    searchReference: (value) => ipcRenderer.invoke("plot:search-reference", value),
+    libraryStyles: () => ipcRenderer.invoke("plot:library-styles"),
+    exportProject: (projectId) => ipcRenderer.invoke("plot:export", { projectId }),
+    onChunk: (callback) => {
+      const handler = (_event, text) => callback(text);
+      ipcRenderer.on("plot:chunk", handler);
+      return () => ipcRenderer.off("plot:chunk", handler);
+    },
   },
 });

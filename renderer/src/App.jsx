@@ -6,8 +6,10 @@ import { classifyBakeError, classifyTurnError } from "../../src/client.js";
 import { DENSITY } from "./mock.js";
 import Reading from "./components/Reading.jsx";
 import Desk from "./components/Desk.jsx";
+import Gate from "./components/Gate.jsx";
 import Creation from "./components/Creation.jsx";
 import Studio from "./components/Studio.jsx";
+import Plotting from "./components/Plotting.jsx";
 import BakeHud from "./components/BakeHud.jsx";
 import ConfirmDialog from "./components/ConfirmDialog.jsx";
 import Chronicle from "./components/Chronicle.jsx";
@@ -57,7 +59,9 @@ export default function App() {
     return DENSITY.find((d) => d.key === saved) ?? DENSITY[1];
   });
 
-  const [surface, setSurface] = useState("desk"); // desk | creation | reading | map | studio
+  // 开门（拍板 2026-08-24）：启动先落模式选择页；选完才进各面。首启未配钥
+  // 时仍直接锁进文房（启动 effect 会覆盖 gate），配置完成后照常走开门。
+  const [surface, setSurface] = useState("gate"); // gate | desk | creation | reading | map | studio | plotting
   const [returnTo, setReturnTo] = useState("desk");
   const [studioLocked, setStudioLocked] = useState(false);
 
@@ -118,6 +122,48 @@ export default function App() {
     document.documentElement.style.setProperty("--read-size", density.size);
     localStorage.setItem("cp-density", density.key);
   }, [density]);
+
+  /* 界面缩放（拍板 2026-08-24）：Ctrl+滚轮增减、Ctrl+=/-/0 快捷键、复位 0。
+     系数夹在 0.7–1.6 并记忆到 localStorage（cp-zoom），启动时恢复——
+     高 DPI 屏上整体嫌大/嫌小的用户自己拧到舒服为止。 */
+  useEffect(() => {
+    const clamp = (factor) => Math.min(1.6, Math.max(0.7, Math.round(factor * 100) / 100));
+    const apply = (factor) => {
+      api.zoom?.set(factor);
+      localStorage.setItem("cp-zoom", String(factor));
+      return factor;
+    };
+    const saved = Number(localStorage.getItem("cp-zoom"));
+    if (Number.isFinite(saved) && saved >= 0.7 && saved <= 1.6 && saved !== 1) {
+      api.zoom?.set(saved);
+    }
+    const onWheel = (event) => {
+      if (!event.ctrlKey) return;
+      event.preventDefault();
+      const current = api.zoom?.get?.() ?? 1;
+      apply(clamp(current + (event.deltaY < 0 ? 0.1 : -0.1)));
+    };
+    const onKey = (event) => {
+      if (!event.ctrlKey || event.altKey || event.metaKey) return;
+      const current = api.zoom?.get?.() ?? 1;
+      if (event.key === "=" || event.key === "+") {
+        event.preventDefault();
+        apply(clamp(current + 0.1));
+      } else if (event.key === "-") {
+        event.preventDefault();
+        apply(clamp(current - 0.1));
+      } else if (event.key === "0") {
+        event.preventDefault();
+        apply(1);
+      }
+    };
+    window.addEventListener("wheel", onWheel, { passive: false });
+    window.addEventListener("keydown", onKey);
+    return () => {
+      window.removeEventListener("wheel", onWheel);
+      window.removeEventListener("keydown", onKey);
+    };
+  }, []);
 
   const note = useCallback((message) => {
     // 新提示覆盖旧提示的计时（D17）：否则旧的 3.2s 定时器会把新提示瞬间清空。
@@ -817,6 +863,20 @@ export default function App() {
     setReturnTo("desk");
     setSurface("studio");
   }, []);
+  // 谋篇是平级独立面（非 overlay）：进出都回案头，不需要 returnTo。
+  const goPlottingFromDesk = useCallback(() => {
+    setSurface("plotting");
+    window.scrollTo({ top: 0 });
+  }, []);
+  // 开门的两个去处：进案头顺手刷新书架；进谋篇即是谋篇面。
+  const enterPlayFromGate = useCallback(() => {
+    setSurface("desk");
+    refreshBooks();
+  }, [refreshBooks]);
+  const enterPlotFromGate = useCallback(() => {
+    setSurface("plotting");
+    window.scrollTo({ top: 0 });
+  }, []);
   const backFromOverlay = useCallback(() => {
     // 回推演台保留阅读位置（C12）：只有回案头才回页顶。
     if (returnTo === "desk") window.scrollTo({ top: 0 });
@@ -837,6 +897,15 @@ export default function App() {
 
   return (
     <>
+      {surface === "gate" && (
+        <Gate
+          theme={theme}
+          onTheme={setTheme}
+          onPlay={enterPlayFromGate}
+          onPlot={enterPlotFromGate}
+        />
+      )}
+
       {surface === "desk" && (
         <Desk
           books={books}
@@ -854,6 +923,7 @@ export default function App() {
           onExportBook={exportBook}
           onImportWorld={() => setWorldImportOpen(true)}
           onStudio={goStudioFromDesk}
+          onPlotting={goPlottingFromDesk}
           theme={theme}
           onTheme={setTheme}
           note={deskNote}
@@ -907,6 +977,15 @@ export default function App() {
 
       {chronicle && (
         <Chronicle bookId={chronicle.bookId} onBack={() => setChronicle(null)} />
+      )}
+
+      {surface === "plotting" && (
+        <Plotting
+          settings={settings}
+          onDesk={goDesk}
+          onStudio={goStudioFromDesk}
+          onNote={note}
+        />
       )}
 
       {surface === "studio" && (
